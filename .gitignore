@@ -61,3 +61,6 @@ backend/models/mdm/humanml_trans_enc_512/*.zip
 
 # Downloads
 Downloads/
+
+# External repositories (submodules)
+backend/external/motion-diffusion-model/

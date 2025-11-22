@@ -227,12 +227,6 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
         rightShin: rightShin
       };
 
-      // 모든 본이 제대로 찾아졌는지 확인
-      const missingBones = Object.entries(boneMap).filter(([name, bone]) => !bone);
-      if (missingBones.length > 0) {
-        console.warn('일부 본을 찾을 수 없음:', missingBones.map(([name]) => name));
-      }
-
       jointMap.forEach(({ name, idx }) => {
         if (idx * 3 + 2 >= frameData.length) return;
 
@@ -246,32 +240,15 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
         if (target) {
           const currentRot = target.rotation;
           // blendFactor를 사용하여 부드럽게 전환
-          const blend = Math.max(0.1, Math.min(1, blendFactor)); // 최소 0.1로 설정하여 완전히 멈추지 않도록
+          const blend = Math.max(0.1, Math.min(1, blendFactor));
           const newRot = {
             x: lerp(currentRot.x, rx, blend),
             y: lerp(currentRot.y, ry, blend),
             z: lerp(currentRot.z, rz, blend)
           };
           target.rotation.set(newRot.x, newRot.y, newRot.z);
-        } else {
-          // 본을 찾지 못한 경우 기본값 유지
-          console.warn(`본을 찾을 수 없음: ${name}`);
         }
       });
-      
-      // hips 위치가 화면 밖으로 나가지 않도록 확인
-      if (hips) {
-        const pos = hips.position;
-        if (Math.abs(pos.x) > 10 || Math.abs(pos.y) > 10 || Math.abs(pos.z) > 10) {
-          console.warn('캐릭터 위치 이상:', pos);
-          hips.position.set(0, 1, 0);
-        }
-      }
-      
-      // 캐릭터가 보이도록 강제 렌더링
-      if (rendererRef.current && sceneRef.current && cameraRef.current) {
-        rendererRef.current.render(sceneRef.current, cameraRef.current);
-      }
     } catch (error) {
       console.error('모션 프레임 적용 오류:', error, {
         frameDataLength: frameData?.length,
@@ -288,84 +265,61 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
       frameIdRef.current = requestAnimationFrame(animate);
 
       // 항상 렌더링 (캐릭터가 보이도록)
-      if (dancerRef.current) {
+      if (dancerRef.current && dancerRef.current.children && dancerRef.current.children.length > 0) {
         const hips = dancerRef.current.children[0];
-        if (!hips) {
-          // 캐릭터가 없어도 렌더링은 계속
-          rendererRef.current.render(sceneRef.current, cameraRef.current);
-          return;
+
+        // 캐릭터 visible 설정 확인
+        if (hips) {
+          hips.visible = true;
+          dancerRef.current.visible = true;
         }
-        
+
         // 모션 데이터 확인 및 적용
         const hasMotionData = motionData && motionData.data && Array.isArray(motionData.data) && motionData.data.length > 0;
-        
+
         if (hasMotionData) {
           // 모션 데이터가 있을 때
           const frameIndex = Math.floor(currentTime * fps);
           const frameTime = (currentTime * fps) % 1;
-          
+
           if (frameIndex >= 0 && frameIndex < motionData.data.length) {
             const frameData = motionData.data[frameIndex];
-            const nextFrameData = frameIndex + 1 < motionData.data.length 
-              ? motionData.data[frameIndex + 1] 
+            const nextFrameData = frameIndex + 1 < motionData.data.length
+              ? motionData.data[frameIndex + 1]
               : frameData;
-            
+
             if (frameData && Array.isArray(frameData) && frameData.length >= 22) {
               const interpolated = frameData.map((val, i) => {
                 const t = frameTime;
-                const nextVal = nextFrameData && Array.isArray(nextFrameData) && nextFrameData[i] !== undefined 
-                  ? nextFrameData[i] 
+                const nextVal = nextFrameData && Array.isArray(nextFrameData) && nextFrameData[i] !== undefined
+                  ? nextFrameData[i]
                   : val;
                 return val + (nextVal - val) * t;
               });
-              
-              // 모션 데이터 적용 전에 캐릭터가 보이는지 확인
-              if (hips && hips.visible !== false) {
-                applyMotionFrame(interpolated, frameTime);
-              } else {
-                console.warn('캐릭터가 보이지 않음, 기본 애니메이션으로 폴백');
-                // 기본 애니메이션으로 폴백
-                const t = currentTime;
-                if (!locks.spine) {
-                  hips.rotation.set(0, Math.sin(t * 0.5) * 0.2, 0);
-                }
-              }
-            } else if (frameData) {
-              // 프레임 데이터가 있지만 형식이 다를 수 있음
-              console.warn('프레임 데이터 형식 이상:', {
-                frameIndex,
-                frameDataLength: frameData?.length,
-                isArray: Array.isArray(frameData)
-              });
-              // 기본 애니메이션으로 폴백
-              const t = currentTime;
-              if (!locks.spine) {
-                hips.rotation.set(0, Math.sin(t * 0.5) * 0.2, 0);
-              }
-            }
-          } else {
-            // 프레임 인덱스가 범위를 벗어남
-            console.warn('프레임 인덱스 범위 초과:', {
-              frameIndex,
-              dataLength: motionData.data.length,
-              currentTime,
-              fps
-            });
-            // 기본 애니메이션으로 폴백
-            const t = currentTime;
-            if (!locks.spine) {
-              hips.rotation.set(0, Math.sin(t * 0.5) * 0.2, 0);
+
+              applyMotionFrame(interpolated, frameTime);
             }
           }
         } else {
-          // 기본 애니메이션 (모션 데이터가 없을 때만)
+          // 기본 애니메이션 (모션 데이터가 없을 때)
           const t = currentTime;
-          if (!locks.spine) {
-            hips.rotation.set(0, Math.sin(t * 0.5) * 0.2, 0);
+          if (hips && !locks.spine) {
+            hips.rotation.y = Math.sin(t * 0.5) * 0.2;
           }
-          const spine = hips.children[0];
+          const spine = hips?.children?.[0];
           if (spine && !locks.spine) {
-            spine.rotation.set(Math.sin(t * 0.7) * 0.1, 0, 0);
+            spine.rotation.x = Math.sin(t * 0.7) * 0.1;
+          }
+          const chest = spine?.children?.[0];
+          if (chest && !locks.arms) {
+            const leftUpperArm = chest.children.find(c => c.position.x < 0);
+            const rightUpperArm = chest.children.find(c => c.position.x > 0);
+            if (leftUpperArm) {
+              leftUpperArm.rotation.x = Math.sin(t * 2) * 0.3;
+            }
+            if (rightUpperArm) {
+              rightUpperArm.rotation.x = Math.sin(t * 2 + Math.PI) * 0.3;
+            }
           }
         }
       }
@@ -394,12 +348,12 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
       // 항상 렌더링
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     };
-    
+
     // 즉시 한 번 렌더링하여 캐릭터가 보이도록
     if (rendererRef.current && sceneRef.current && cameraRef.current) {
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     }
-    
+
     animate();
     return () => {
       if (frameIdRef.current) {
@@ -679,18 +633,14 @@ export default function SotaDanceStudio() {
     if (!audio) return;
 
     let rafId = null;
-    let lastTime = 0;
 
     const updateTime = () => {
       if (audio && !isNaN(audio.currentTime)) {
         const currentAudioTime = audio.currentTime;
-        // 작은 변화도 업데이트하여 재생 헤드가 부드럽게 움직이도록
-        if (Math.abs(currentAudioTime - lastTime) > 0.01 || !isPlaying || lastTime === 0) {
-          setCurrentTime(currentAudioTime);
-          if (totalDuration > 0) {
-            setPlayheadPosition(calculatePlayheadPosition(currentAudioTime));
-          }
-          lastTime = currentAudioTime;
+        setCurrentTime(currentAudioTime);
+        if (totalDuration > 0) {
+          const position = calculatePlayheadPosition(currentAudioTime);
+          setPlayheadPosition(position);
         }
       }
     };
@@ -711,17 +661,14 @@ export default function SotaDanceStudio() {
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    
+
     // 초기 시간 업데이트
     updateTime();
-    
+
     const smoothUpdate = () => {
       if (isPlaying && audio && !audio.paused) {
         updateTime();
         rafId = requestAnimationFrame(smoothUpdate);
-      } else if (!isPlaying && rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
       }
     };
 
@@ -737,23 +684,6 @@ export default function SotaDanceStudio() {
     };
   }, [totalDuration, isPlaying]);
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio && !isNaN(currentTime) && currentTime >= 0) {
-      const timeDiff = Math.abs(audio.currentTime - currentTime);
-      if (timeDiff > 0.1) {
-        const wasPlaying = !audio.paused;
-        audio.currentTime = currentTime;
-        if (wasPlaying) {
-          setTimeout(() => {
-            if (audioRef.current && !audioRef.current.paused) {
-              audioRef.current.play().catch(() => {});
-            }
-          }, 10);
-        }
-      }
-    }
-  }, [currentTime]);
 
   // API 함수
   const getAudioDuration = (file) => {
@@ -1403,15 +1333,14 @@ export default function SotaDanceStudio() {
               )}
               
               {tracks.music.length > 0 && totalDuration > 0 && (
-                <div 
-                  className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-50 pointer-events-none"
-                  style={{ 
-                    left: `calc(128px + ${Math.max(0, Math.min(100, playheadPosition || 0))}% * (100% - 128px) / 100)`,
-                    width: '2px',
-                    transform: 'translateX(-50%)'
+                <div
+                  className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-50 pointer-events-none transition-all duration-100"
+                  style={{
+                    left: `calc(128px + (100% - 128px) * ${Math.max(0, Math.min(100, playheadPosition || 0)) / 100})`,
+                    width: '2px'
                   }}
                 >
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-red-500"></div>
+                  <div className="absolute top-0 left-0 transform -translate-x-1/2 -translate-y-1 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-transparent border-t-red-500"></div>
                 </div>
               )}
             </div>

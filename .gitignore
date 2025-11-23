@@ -64,3 +64,24 @@ Downloads/
 
 # External repositories (submodules)
 backend/external/motion-diffusion-model/
+
+# Model files (too large for git)
+backend/models/mdm/**/*.pt
+backend/models/mdm/**/*.zip
+backend/models/mdm/**/*.npz
+*.npy
+*.pkl
+*.h5
+
+# Large data files
+*.mp4
+*.avi
+*.mov
+*.wav
+*.mp3
+*.flac
+
+# External repositories (submodules)
+backend/external/motion-diffusion-model/
+backend/external/HumanML3D/
+

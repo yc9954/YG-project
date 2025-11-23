@@ -318,6 +318,12 @@ class MotionGenerator:
         # 생성된 모션에 사전 스무딩 적용 (더 자연스러운 움직임)
         motion = self._pre_smooth_motion(motion.astype(np.float32))
         
+        # 관절 간 연결성 개선 (부모-자식 관계 고려)
+        motion = self._improve_joint_connectivity(motion)
+        
+        # 물리적으로 자연스러운 움직임 보정
+        motion = self._apply_physics_constraints(motion, fps)
+        
         return motion
     
     def _pre_smooth_motion(self, motion: np.ndarray) -> np.ndarray:
@@ -344,6 +350,88 @@ class MotionGenerator:
         except Exception as e:
             # scipy가 없으면 원본 반환
             pass
+        
+        return motion
+    
+    def _improve_joint_connectivity(self, motion: np.ndarray) -> np.ndarray:
+        """
+        관절 간 연결성 개선 - 부모-자식 관계를 고려하여 더 자연스러운 움직임 생성
+        """
+        try:
+            # 관절 계층 구조 정의 (부모-자식 관계)
+            # 0: Hips (root)
+            # 1: Spine (child of Hips)
+            # 2: Chest (child of Spine)
+            # 3: Head (child of Chest)
+            # 4-7: Arms (children of Chest)
+            # 8-11: Legs (children of Hips)
+            
+            # 부모 관절의 움직임이 자식에게 영향을 주도록 조정
+            for i in range(1, len(motion)):
+                # Spine은 Hips의 움직임을 일부 상속
+                motion[i, 1, :] = motion[i, 1, :] * 0.7 + motion[i, 0, :] * 0.3
+                
+                # Chest는 Spine의 움직임을 일부 상속
+                motion[i, 2, :] = motion[i, 2, :] * 0.8 + motion[i, 1, :] * 0.2
+                
+                # Head는 Chest의 움직임을 일부 상속
+                if motion.shape[1] > 3:
+                    motion[i, 3, :] = motion[i, 3, :] * 0.9 + motion[i, 2, :] * 0.1
+                
+                # Arms는 Chest의 움직임을 일부 상속
+                for arm_idx in [4, 6]:  # LeftUpperArm, RightUpperArm
+                    if arm_idx < motion.shape[1]:
+                        motion[i, arm_idx, :] = motion[i, arm_idx, :] * 0.85 + motion[i, 2, :] * 0.15
+                
+                # Legs는 Hips의 움직임을 일부 상속
+                for leg_idx in [8, 10]:  # LeftThigh, RightThigh
+                    if leg_idx < motion.shape[1]:
+                        motion[i, leg_idx, :] = motion[i, leg_idx, :] * 0.8 + motion[i, 0, :] * 0.2
+        except Exception as e:
+            print(f"⚠️  관절 연결성 개선 실패 (무시): {e}")
+        
+        return motion
+    
+    def _apply_physics_constraints(self, motion: np.ndarray, fps: int) -> np.ndarray:
+        """
+        물리적으로 자연스러운 움직임 보정
+        - 속도 제한
+        - 가속도 제한
+        - 관절 각도 제한
+        """
+        try:
+            # 속도 제한 (프레임 간 변화량 제한)
+            max_velocity = 0.5  # 라디안/프레임
+            dt = 1.0 / fps
+            
+            for j in range(motion.shape[1]):
+                for d in range(3):
+                    for i in range(1, len(motion)):
+                        velocity = (motion[i, j, d] - motion[i-1, j, d]) / dt
+                        if abs(velocity) > max_velocity:
+                            # 속도 제한 적용
+                            limited_velocity = np.sign(velocity) * max_velocity
+                            motion[i, j, d] = motion[i-1, j, d] + limited_velocity * dt
+            
+            # 관절 각도 제한 (과도한 회전 방지)
+            max_angle = np.pi * 0.8  # 약 144도
+            for i in range(len(motion)):
+                for j in range(motion.shape[1]):
+                    for d in range(3):
+                        if abs(motion[i, j, d]) > max_angle:
+                            motion[i, j, d] = np.sign(motion[i, j, d]) * max_angle
+            
+            # 부드러운 가속도/감속도
+            for j in range(motion.shape[1]):
+                for d in range(3):
+                    # 가속도 제한을 위한 추가 스무딩
+                    if len(motion) > 2:
+                        for i in range(1, len(motion) - 1):
+                            # 이전 프레임과 다음 프레임의 평균으로 조정
+                            avg = (motion[i-1, j, d] + motion[i+1, j, d]) / 2
+                            motion[i, j, d] = motion[i, j, d] * 0.7 + avg * 0.3
+        except Exception as e:
+            print(f"⚠️  물리적 제약 적용 실패 (무시): {e}")
         
         return motion
     
@@ -431,7 +519,7 @@ class MotionGenerator:
     def _align_to_beats(self, motion: np.ndarray, beats: list, fps: int) -> np.ndarray:
         """
         모션을 오디오 비트에 맞춰 정렬 및 강조
-        비트 타임스탬프에 맞춰 모션의 에너지를 증가시킵니다.
+        비트 타임스탬프에 맞춰 모션의 에너지를 증가시키고, 비트에 정확히 맞춥니다.
         """
         try:
             # beats가 비어있거나 None이면 원본 반환
@@ -439,6 +527,37 @@ class MotionGenerator:
                 return motion
             
             frames = motion.shape[0]
+            
+            # 비트를 프레임 인덱스로 변환
+            beat_frames = [int(b * fps) for b in beats if 0 <= b * fps < frames]
+            if not beat_frames:
+                return motion
+            
+            # 각 비트에 대해 모션 강조
+            for beat_frame in beat_frames:
+                if 0 <= beat_frame < frames:
+                    # 비트 전후 2프레임 범위에서 강조
+                    for offset in range(-2, 3):
+                        frame_idx = beat_frame + offset
+                        if 0 <= frame_idx < frames:
+                            # 거리에 따른 강조 강도 (비트 중심에서 멀어질수록 약해짐)
+                            intensity = 1.0 - abs(offset) * 0.3
+                            intensity = max(0.3, intensity)
+                            
+                            # 에너지 부스트 적용
+                            motion[frame_idx, :, :] *= (1.0 + intensity * 0.2)
+            
+            # 강한 비트와 약한 비트 구분 (첫 번째 비트는 강하게)
+            if len(beat_frames) > 0:
+                # 메인 비트 (첫 번째 비트) 강조
+                main_beat = beat_frames[0]
+                if 0 <= main_beat < frames:
+                    motion[main_beat, :, :] *= 1.3
+                
+                # 4박자 패턴 인식 (첫 번째 비트를 더 강하게)
+                for i, beat_frame in enumerate(beat_frames):
+                    if i % 4 == 0 and 0 <= beat_frame < frames:
+                        motion[beat_frame, :, :] *= 1.2
             motion_enhanced = motion.copy()
             
             # 비트를 프레임 인덱스로 변환

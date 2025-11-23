@@ -1,5 +1,6 @@
 {
-  "mdm_repo_path": "/Users/iyuchan/YG project/backend/external/motion-diffusion-model",
-  "model_path": "/Users/iyuchan/YG project/backend/models/mdm/humanml_trans_enc_512/model000475000.pt",
-  "data_path": "/Users/iyuchan/YG project/backend/data"
+  "mdm_repo_path": "/Users/iyuchan/YG-project-1/backend/external/motion-diffusion-model",
+  "model_path": "/Users/iyuchan/YG-project-1/backend/models/mdm/humanml_trans_enc_512/model000475000.pt",
+  "data_path": "/Users/iyuchan/YG-project-1/backend/data",
+  "dataset": "humanml"
 }

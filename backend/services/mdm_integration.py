@@ -9,6 +9,22 @@ import torch
 import numpy as np
 from pathlib import Path
 from typing import Optional
+import inspect
+
+# Python 3.12 호환성 패치 (chumpy)
+if not hasattr(inspect, 'getargspec'):
+    inspect.getargspec = inspect.getfullargspec
+
+# NumPy 호환성 패치 (chumpy가 numpy에서 bool, int 등을 직접 import하려고 함)
+import numpy
+if not hasattr(numpy, 'bool'):
+    numpy.bool = numpy.bool_
+    numpy.int = numpy.int_
+    numpy.float = numpy.float_
+    numpy.complex = numpy.complex_
+    numpy.object = numpy.object_
+    numpy.unicode = numpy.str_
+    numpy.str = numpy.str_
 
 # MDM 저장소 경로 추가
 base_dir = Path(__file__).parent.parent
@@ -77,23 +93,27 @@ class MDMIntegration:
         from argparse import Namespace
         self.args = Namespace(**args_dict)
         
-        # 필수 속성 설정
-        if not hasattr(self.args, 'guidance_param'):
-            self.args.guidance_param = 2.5
-        if not hasattr(self.args, 'num_samples'):
-            self.args.num_samples = 1
-        if not hasattr(self.args, 'num_repetitions'):
-            self.args.num_repetitions = 1
-        if not hasattr(self.args, 'motion_length'):
-            self.args.motion_length = 10.0
-        if not hasattr(self.args, 'text_prompt'):
-            self.args.text_prompt = ''
-        if not hasattr(self.args, 'batch_size'):
-            self.args.batch_size = 1
-        if not hasattr(self.args, 'seed'):
-            self.args.seed = 10
-        if not hasattr(self.args, 'use_ema'):
-            self.args.use_ema = False
+        # 필수 속성 설정 (누락된 속성에 기본값 설정)
+        default_attrs = {
+            'guidance_param': 2.5,
+            'num_samples': 1,
+            'num_repetitions': 1,
+            'motion_length': 10.0,
+            'text_prompt': '',
+            'batch_size': 1,
+            'seed': 10,
+            'use_ema': False,
+            'unconstrained': False,
+            'text_encoder_type': 'clip',
+            'data_dir': '',
+            'pos_embed_max_len': 5000,  # Position embedding 최대 길이 (기본값)
+            'mask_frames': False,
+            'gen_during_training': False,
+        }
+        
+        for attr, default_value in default_attrs.items():
+            if not hasattr(self.args, attr):
+                setattr(self.args, attr, default_value)
         
         print(f"✅ 모델 설정 로드 완료: {self.args.dataset}")
     
@@ -105,13 +125,35 @@ class MDMIntegration:
             bool: 로드 성공 여부
         """
         try:
-            print("📥 데이터 로더 생성 중...")
             abs_path = str(mdm_repo_path)
             
-            # 작업 디렉토리를 MDM 저장소로 변경 (상대 경로 문제 해결)
+            # 작업 디렉토리를 MDM 저장소로 먼저 변경 (모든 상대 경로 문제 해결)
             original_cwd = os.getcwd()
+            os.chdir(abs_path)
+            
             try:
-                os.chdir(abs_path)
+                print("📥 데이터 로더 생성 중...")
+                
+                # SMPL 경로 확인 및 복사 (필요시)
+                smpl_src = os.path.join(abs_path, 'smpl')
+                smpl_dst = os.path.join(abs_path, 'body_models', 'smpl')
+                if os.path.exists(smpl_src) and not os.path.exists(smpl_dst):
+                    import shutil
+                    os.makedirs(os.path.dirname(smpl_dst), exist_ok=True)
+                    shutil.copytree(smpl_src, smpl_dst)
+                    print("✅ SMPL 파일 복사 완료")
+                
+                # SMPL 파일 존재 확인
+                smpl_path = os.path.join(abs_path, 'body_models', 'smpl', 'SMPL_NEUTRAL.pkl')
+                if not os.path.exists(smpl_path):
+                    # 절대 경로로도 확인
+                    if os.path.exists('./body_models/smpl/SMPL_NEUTRAL.pkl'):
+                        print("✅ SMPL 파일 확인됨 (상대 경로)")
+                    else:
+                        print(f"⚠️  SMPL 파일을 찾을 수 없습니다: {smpl_path}")
+                        print(f"   현재 디렉토리: {os.getcwd()}")
+                        print(f"   body_models/smpl 존재: {os.path.exists('./body_models/smpl')}")
+                
                 data = get_dataset_loader(
                     name=self.args.dataset,
                     batch_size=self.args.batch_size,
@@ -119,27 +161,33 @@ class MDMIntegration:
                     split='test',
                     hml_mode='text_only'
                 )
+            
+                print("📥 모델 및 Diffusion 생성 중...")
+                self.model, self.diffusion = create_model_and_diffusion(self.args, data)
+                
+                print(f"📥 체크포인트 로드 중: {self.model_path}")
+                load_saved_model(self.model, self.model_path, use_avg=self.args.use_ema)
+                
+                # Classifier-free guidance 설정
+                if self.args.guidance_param != 1:
+                    self.model = ClassifierFreeSampleModel(self.model)
+                
+                self.model.to(self.device)
+                self.model.eval()
+                
+                print("✅ MDM 모델 로드 완료")
+                return True
             finally:
+                # 작업 디렉토리 복원
                 os.chdir(original_cwd)
             
-            print("📥 모델 및 Diffusion 생성 중...")
-            self.model, self.diffusion = create_model_and_diffusion(self.args, data)
-            
-            print(f"📥 체크포인트 로드 중: {self.model_path}")
-            load_saved_model(self.model, self.model_path, use_avg=self.args.use_ema)
-            
-            # Classifier-free guidance 설정
-            if self.args.guidance_param != 1:
-                self.model = ClassifierFreeSampleModel(self.model)
-            
-            self.model.to(self.device)
-            self.model.eval()
-            
-            print("✅ MDM 모델 로드 완료")
-            return True
-            
         except Exception as e:
+            import traceback
             print(f"❌ 모델 로드 실패: {e}")
+            traceback.print_exc()
+            # 작업 디렉토리 복원
+            if 'original_cwd' in locals():
+                os.chdir(original_cwd)
             return False
     
     def generate(
@@ -214,10 +262,34 @@ class MDMIntegration:
             )
             
             # 첫 번째 샘플만 반환
-            # HumanML3D 벡터 표현은 나중에 변환 필요
-            motion = sample[0].cpu().numpy()  # [frames, joints, features]
+            # HumanML3D 벡터 형식 (263차원)을 관절 회전 형식으로 변환
+            motion = sample[0].cpu().numpy()  # 실제 형식 확인 필요
             
-            print(f"✅ 모션 생성 완료: {motion.shape}")
+            # 형식 확인 및 변환
+            print(f"🔍 원본 모션 shape: {motion.shape}")
+            
+            # [features, 1, frames] 형식 -> [frames, joints, 3]
+            if len(motion.shape) == 3:
+                if motion.shape[0] == 263 and motion.shape[1] == 1:
+                    # [263, 1, frames] -> [frames, 263] -> [frames, 22, 3]
+                    motion = motion.transpose(2, 0, 1)  # [frames, 263, 1]
+                    if motion.shape[2] == 1:
+                        motion = motion.squeeze(2)  # [frames, 263]
+                    # 263차원에서 처음 66개 값이 관절 회전 (22관절 * 3)
+                    motion = motion[:, :66].reshape(motion.shape[0], 22, 3)
+                    print(f"✅ 모션 생성 완료 (변환됨): {motion.shape}")
+                elif motion.shape[2] == 1:
+                    # [frames, features, 1] -> [frames, features]
+                    motion = motion.squeeze(2)
+                    if motion.shape[1] == 263:
+                        motion = motion[:, :66].reshape(motion.shape[0], 22, 3)
+                        print(f"✅ 모션 생성 완료 (변환됨): {motion.shape}")
+            elif len(motion.shape) == 2:
+                # [frames, features] 형식
+                if motion.shape[1] == 263:
+                    motion = motion[:, :66].reshape(motion.shape[0], 22, 3)
+                    print(f"✅ 모션 생성 완료 (변환됨): {motion.shape}")
+            
             return motion
             
         except Exception as e:

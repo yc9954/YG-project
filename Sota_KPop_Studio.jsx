@@ -25,8 +25,8 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
     if (!containerRef.current) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#111');
-    scene.fog = new THREE.Fog('#111', 5, 20);
+    scene.background = new THREE.Color('#050505'); // Deep Black
+    scene.fog = new THREE.Fog('#050505', 8, 25);
 
     const camera = new THREE.PerspectiveCamera(50, containerRef.current.clientWidth / containerRef.current.clientHeight, 0.1, 100);
     camera.position.set(0, 2, 5);
@@ -37,20 +37,40 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
     renderer.shadowMap.enabled = true;
     containerRef.current.appendChild(renderer.domElement);
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    // Cold Rim Lights (Studio Lighting Setup)
+    const ambientLight = new THREE.AmbientLight(0x404060, 0.15); // Very low ambient
     scene.add(ambientLight);
 
-    const spotLight = new THREE.SpotLight(0xffffff, 20);
-    spotLight.position.set(5, 8, 5);
-    spotLight.castShadow = true;
-    scene.add(spotLight);
+    // Main Key Light (Cold White)
+    const keyLight = new THREE.SpotLight(0xe0f0ff, 35);
+    keyLight.position.set(4, 6, 6);
+    keyLight.angle = Math.PI / 4;
+    keyLight.penumbra = 0.3;
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    scene.add(keyLight);
 
-    const pointLight = new THREE.PointLight(0x3b82f6, 5);
-    pointLight.position.set(-5, 2, -5);
-    scene.add(pointLight);
+    // Rim Light 1 (Cold Blue-White from behind)
+    const rimLight1 = new THREE.SpotLight(0xb0d0ff, 25);
+    rimLight1.position.set(-5, 5, -5);
+    rimLight1.angle = Math.PI / 3;
+    rimLight1.penumbra = 0.4;
+    scene.add(rimLight1);
 
-    const gridHelper = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
+    // Rim Light 2 (Silver highlight)
+    const rimLight2 = new THREE.SpotLight(0xc0c0d0, 20);
+    rimLight2.position.set(5, 4, -4);
+    rimLight2.angle = Math.PI / 3.5;
+    rimLight2.penumbra = 0.5;
+    scene.add(rimLight2);
+
+    // Accent Point Light (Subtle cold accent)
+    const accentLight = new THREE.PointLight(0x8090a0, 3);
+    accentLight.position.set(0, 3, -3);
+    scene.add(accentLight);
+
+    const gridHelper = new THREE.GridHelper(20, 20, 0x303040, 0x101015);
     scene.add(gridHelper);
 
     const dancerGroup = new THREE.Group();
@@ -58,21 +78,51 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
 
     const createBone = (length, color, locked) => {
       const group = new THREE.Group();
-      const geometry = new THREE.CylinderGeometry(0.08, 0.06, length, 16);
-      const material = new THREE.MeshStandardMaterial({ 
-        color: locked ? 0xef4444 : color,
-        emissive: locked ? 0x7f1d1d : 0x000000,
-        roughness: 0.3,
-        metalness: 0.8
-      });
+      const geometry = new THREE.CylinderGeometry(0.08, 0.06, length, 24);
+
+      // Determine material: Polished Chrome (silver) or Matte Black Rubber
+      const isChrome = color >= 0x808080; // Silver colors get chrome
+      const isMatte = color < 0x808080;   // Darker colors get matte black
+
+      let material;
+      if (locked) {
+        // Locked joints: Red chrome with emission
+        material = new THREE.MeshStandardMaterial({
+          color: 0xff3030,
+          emissive: 0x800000,
+          roughness: 0.15,
+          metalness: 0.95,
+          envMapIntensity: 1.5
+        });
+      } else if (isChrome) {
+        // Polished Chrome
+        material = new THREE.MeshStandardMaterial({
+          color: color,
+          roughness: 0.1,
+          metalness: 1.0,
+          envMapIntensity: 2.0
+        });
+      } else {
+        // Matte Black Rubber
+        material = new THREE.MeshStandardMaterial({
+          color: color,
+          roughness: 0.9,
+          metalness: 0.05,
+          envMapIntensity: 0.3
+        });
+      }
+
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.y = length / 2;
       mesh.castShadow = true;
-      
-      const jointGeo = new THREE.SphereGeometry(0.12, 16, 16);
-      const jointMat = new THREE.MeshStandardMaterial({ color: locked ? 0xef4444 : color });
+      mesh.receiveShadow = true;
+
+      const jointGeo = new THREE.SphereGeometry(0.12, 24, 24);
+      const jointMat = material.clone();
       const joint = new THREE.Mesh(jointGeo, jointMat);
-      
+      joint.castShadow = true;
+      joint.receiveShadow = true;
+
       group.add(joint);
       group.add(mesh);
       return group;
@@ -80,54 +130,217 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
 
     const hips = new THREE.Group();
     hips.position.y = 1;
+    hips.name = 'hips';
     dancerGroup.add(hips);
 
-    const spine = createBone(0.4, 0x3b82f6, locks.spine);
+    // Spine Chain
+    const spine = createBone(0.15, 0x2a2a2a, locks.spine);
+    spine.position.y = 0;
+    spine.name = 'spine';
     hips.add(spine);
 
-    const chest = createBone(0.3, 0x3b82f6, locks.spine);
-    chest.position.y = 0.4;
-    spine.add(chest);
+    const spine1 = createBone(0.15, 0x2a2a2a, locks.spine);
+    spine1.position.y = 0.15;
+    spine1.name = 'spine1';
+    spine.add(spine1);
 
-    const head = createBone(0.2, 0xff6b6b, locks.head);
-    head.position.y = 0.3;
-    chest.add(head);
+    const spine2 = createBone(0.15, 0x2a2a2a, locks.spine);
+    spine2.position.y = 0.15;
+    spine2.name = 'spine2';
+    spine1.add(spine2);
 
-    const leftUpperArm = createBone(0.35, 0x4ecdc4, locks.arms);
-    leftUpperArm.position.set(-0.15, 0.25, 0);
-    leftUpperArm.rotation.z = 0.3;
-    chest.add(leftUpperArm);
+    const chest = createBone(0.2, 0xc0c0c0, locks.spine);
+    chest.position.y = 0.15;
+    chest.name = 'chest';
+    spine2.add(chest);
 
-    const leftForearm = createBone(0.3, 0x4ecdc4, locks.arms);
-    leftForearm.position.y = 0.35;
+    const neck = createBone(0.1, 0xc0c0c0, locks.head);
+    neck.position.y = 0.2;
+    neck.name = 'neck';
+    chest.add(neck);
+
+    const head = createBone(0.2, 0xe0e0e0, locks.head);
+    head.position.y = 0.1;
+    head.name = 'head';
+    neck.add(head);
+
+    // Left Arm Chain
+    const leftShoulder = createBone(0.08, 0xa0a0a0, locks.arms);
+    leftShoulder.position.set(-0.2, 0.15, 0);
+    leftShoulder.rotation.z = Math.PI / 2;
+    leftShoulder.name = 'leftShoulder';
+    chest.add(leftShoulder);
+
+    const leftUpperArm = createBone(0.3, 0x808080, locks.arms);
+    leftUpperArm.position.set(0, 0.08, 0);
+    leftUpperArm.rotation.z = -Math.PI / 2;
+    leftUpperArm.name = 'leftUpperArm';
+    leftShoulder.add(leftUpperArm);
+
+    const leftForearm = createBone(0.28, 0x606060, locks.arms);
+    leftForearm.position.y = 0.3;
+    leftForearm.name = 'leftForearm';
     leftUpperArm.add(leftForearm);
 
-    const rightUpperArm = createBone(0.35, 0x4ecdc4, locks.arms);
-    rightUpperArm.position.set(0.15, 0.25, 0);
-    rightUpperArm.rotation.z = -0.3;
-    chest.add(rightUpperArm);
+    const leftWrist = createBone(0.05, 0x505050, locks.arms);
+    leftWrist.position.y = 0.28;
+    leftWrist.name = 'leftWrist';
+    leftForearm.add(leftWrist);
 
-    const rightForearm = createBone(0.3, 0x4ecdc4, locks.arms);
-    rightForearm.position.y = 0.35;
+    const leftHand = createBone(0.08, 0x404040, locks.arms);
+    leftHand.position.y = 0.05;
+    leftHand.name = 'leftHand';
+    leftWrist.add(leftHand);
+
+    // Left Fingers
+    const leftThumb1 = createBone(0.03, 0xc0c0c0, locks.arms);
+    leftThumb1.position.set(0.02, 0.08, 0);
+    leftThumb1.rotation.z = -0.5;
+    leftThumb1.name = 'leftThumb1';
+    leftHand.add(leftThumb1);
+
+    const leftThumb2 = createBone(0.02, 0xc0c0c0, locks.arms);
+    leftThumb2.position.y = 0.03;
+    leftThumb2.name = 'leftThumb2';
+    leftThumb1.add(leftThumb2);
+
+    const leftIndex1 = createBone(0.035, 0xb0b0b0, locks.arms);
+    leftIndex1.position.set(0.01, 0.08, 0);
+    leftIndex1.rotation.z = -0.1;
+    leftIndex1.name = 'leftIndex1';
+    leftHand.add(leftIndex1);
+
+    const leftIndex2 = createBone(0.025, 0xb0b0b0, locks.arms);
+    leftIndex2.position.y = 0.035;
+    leftIndex2.name = 'leftIndex2';
+    leftIndex1.add(leftIndex2);
+
+    const leftMiddle1 = createBone(0.04, 0xa0a0a0, locks.arms);
+    leftMiddle1.position.set(0, 0.08, 0);
+    leftMiddle1.name = 'leftMiddle1';
+    leftHand.add(leftMiddle1);
+
+    const leftMiddle2 = createBone(0.03, 0xa0a0a0, locks.arms);
+    leftMiddle2.position.y = 0.04;
+    leftMiddle2.name = 'leftMiddle2';
+    leftMiddle1.add(leftMiddle2);
+
+    // Right Arm Chain
+    const rightShoulder = createBone(0.08, 0xa0a0a0, locks.arms);
+    rightShoulder.position.set(0.2, 0.15, 0);
+    rightShoulder.rotation.z = -Math.PI / 2;
+    rightShoulder.name = 'rightShoulder';
+    chest.add(rightShoulder);
+
+    const rightUpperArm = createBone(0.3, 0x808080, locks.arms);
+    rightUpperArm.position.set(0, 0.08, 0);
+    rightUpperArm.rotation.z = Math.PI / 2;
+    rightUpperArm.name = 'rightUpperArm';
+    rightShoulder.add(rightUpperArm);
+
+    const rightForearm = createBone(0.28, 0x606060, locks.arms);
+    rightForearm.position.y = 0.3;
+    rightForearm.name = 'rightForearm';
     rightUpperArm.add(rightForearm);
 
-    const leftThigh = createBone(0.4, 0x95e1d3, locks.legs);
-    leftThigh.position.set(-0.1, 0, 0);
+    const rightWrist = createBone(0.05, 0x505050, locks.arms);
+    rightWrist.position.y = 0.28;
+    rightWrist.name = 'rightWrist';
+    rightForearm.add(rightWrist);
+
+    const rightHand = createBone(0.08, 0x404040, locks.arms);
+    rightHand.position.y = 0.05;
+    rightHand.name = 'rightHand';
+    rightWrist.add(rightHand);
+
+    // Right Fingers
+    const rightThumb1 = createBone(0.03, 0xc0c0c0, locks.arms);
+    rightThumb1.position.set(-0.02, 0.08, 0);
+    rightThumb1.rotation.z = 0.5;
+    rightThumb1.name = 'rightThumb1';
+    rightHand.add(rightThumb1);
+
+    const rightThumb2 = createBone(0.02, 0xc0c0c0, locks.arms);
+    rightThumb2.position.y = 0.03;
+    rightThumb2.name = 'rightThumb2';
+    rightThumb1.add(rightThumb2);
+
+    const rightIndex1 = createBone(0.035, 0xb0b0b0, locks.arms);
+    rightIndex1.position.set(-0.01, 0.08, 0);
+    rightIndex1.rotation.z = 0.1;
+    rightIndex1.name = 'rightIndex1';
+    rightHand.add(rightIndex1);
+
+    const rightIndex2 = createBone(0.025, 0xb0b0b0, locks.arms);
+    rightIndex2.position.y = 0.035;
+    rightIndex2.name = 'rightIndex2';
+    rightIndex1.add(rightIndex2);
+
+    const rightMiddle1 = createBone(0.04, 0xa0a0a0, locks.arms);
+    rightMiddle1.position.set(0, 0.08, 0);
+    rightMiddle1.name = 'rightMiddle1';
+    rightHand.add(rightMiddle1);
+
+    const rightMiddle2 = createBone(0.03, 0xa0a0a0, locks.arms);
+    rightMiddle2.position.y = 0.04;
+    rightMiddle2.name = 'rightMiddle2';
+    rightMiddle1.add(rightMiddle2);
+
+    // Left Leg Chain
+    const leftThigh = createBone(0.4, 0x404040, locks.legs);
+    leftThigh.position.set(-0.1, -0.05, 0);
     leftThigh.rotation.x = 0.1;
+    leftThigh.name = 'leftThigh';
     hips.add(leftThigh);
 
-    const leftShin = createBone(0.4, 0x95e1d3, locks.legs);
+    const leftShin = createBone(0.38, 0x303030, locks.legs);
     leftShin.position.y = 0.4;
+    leftShin.name = 'leftShin';
     leftThigh.add(leftShin);
 
-    const rightThigh = createBone(0.4, 0x95e1d3, locks.legs);
-    rightThigh.position.set(0.1, 0, 0);
+    const leftAnkle = createBone(0.05, 0x505050, locks.legs);
+    leftAnkle.position.y = 0.38;
+    leftAnkle.name = 'leftAnkle';
+    leftShin.add(leftAnkle);
+
+    const leftFoot = createBone(0.08, 0x606060, locks.legs);
+    leftFoot.position.y = 0.05;
+    leftFoot.rotation.x = -1.3;
+    leftFoot.name = 'leftFoot';
+    leftAnkle.add(leftFoot);
+
+    const leftToe = createBone(0.04, 0x707070, locks.legs);
+    leftToe.position.y = 0.08;
+    leftToe.name = 'leftToe';
+    leftFoot.add(leftToe);
+
+    // Right Leg Chain
+    const rightThigh = createBone(0.4, 0x404040, locks.legs);
+    rightThigh.position.set(0.1, -0.05, 0);
     rightThigh.rotation.x = 0.1;
+    rightThigh.name = 'rightThigh';
     hips.add(rightThigh);
 
-    const rightShin = createBone(0.4, 0x95e1d3, locks.legs);
+    const rightShin = createBone(0.38, 0x303030, locks.legs);
     rightShin.position.y = 0.4;
+    rightShin.name = 'rightShin';
     rightThigh.add(rightShin);
+
+    const rightAnkle = createBone(0.05, 0x505050, locks.legs);
+    rightAnkle.position.y = 0.38;
+    rightAnkle.name = 'rightAnkle';
+    rightShin.add(rightAnkle);
+
+    const rightFoot = createBone(0.08, 0x606060, locks.legs);
+    rightFoot.position.y = 0.05;
+    rightFoot.rotation.x = -1.3;
+    rightFoot.name = 'rightFoot';
+    rightAnkle.add(rightFoot);
+
+    const rightToe = createBone(0.04, 0x707070, locks.legs);
+    rightToe.position.y = 0.08;
+    rightToe.name = 'rightToe';
+    rightFoot.add(rightToe);
 
     sceneRef.current = scene;
     cameraRef.current = camera;
@@ -184,47 +397,112 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
       // blendFactor는 0~1 사이 값으로 클램핑
       const blendFactor = Math.max(0, Math.min(1, easingFunc(Math.max(0, Math.min(1, smoothness)))));
 
+      // 확장된 관절 매핑 (50+ 관절)
       const jointMap = [
         { name: 'hips', idx: 0, parent: null },
         { name: 'spine', idx: 1, parent: 'hips' },
-        { name: 'chest', idx: 2, parent: 'spine' },
-        { name: 'head', idx: 3, parent: 'chest' },
-        { name: 'leftUpperArm', idx: 4, parent: 'chest' },
-        { name: 'leftForearm', idx: 5, parent: 'leftUpperArm' },
-        { name: 'rightUpperArm', idx: 6, parent: 'chest' },
-        { name: 'rightForearm', idx: 7, parent: 'rightUpperArm' },
-        { name: 'leftThigh', idx: 8, parent: 'hips' },
-        { name: 'leftShin', idx: 9, parent: 'leftThigh' },
-        { name: 'rightThigh', idx: 10, parent: 'hips' },
-        { name: 'rightShin', idx: 11, parent: 'rightThigh' },
+        { name: 'spine1', idx: 2, parent: 'spine' },
+        { name: 'spine2', idx: 3, parent: 'spine1' },
+        { name: 'chest', idx: 4, parent: 'spine2' },
+        { name: 'neck', idx: 5, parent: 'chest' },
+        { name: 'head', idx: 6, parent: 'neck' },
+
+        // Left Arm Chain
+        { name: 'leftShoulder', idx: 7, parent: 'chest' },
+        { name: 'leftUpperArm', idx: 8, parent: 'leftShoulder' },
+        { name: 'leftForearm', idx: 9, parent: 'leftUpperArm' },
+        { name: 'leftWrist', idx: 10, parent: 'leftForearm' },
+        { name: 'leftHand', idx: 11, parent: 'leftWrist' },
+        { name: 'leftThumb1', idx: 12, parent: 'leftHand' },
+        { name: 'leftThumb2', idx: 13, parent: 'leftThumb1' },
+        { name: 'leftIndex1', idx: 14, parent: 'leftHand' },
+        { name: 'leftIndex2', idx: 15, parent: 'leftIndex1' },
+        { name: 'leftMiddle1', idx: 16, parent: 'leftHand' },
+        { name: 'leftMiddle2', idx: 17, parent: 'leftMiddle1' },
+
+        // Right Arm Chain
+        { name: 'rightShoulder', idx: 18, parent: 'chest' },
+        { name: 'rightUpperArm', idx: 19, parent: 'rightShoulder' },
+        { name: 'rightForearm', idx: 20, parent: 'rightUpperArm' },
+        { name: 'rightWrist', idx: 21, parent: 'rightForearm' },
+        { name: 'rightHand', idx: 22, parent: 'rightWrist' },
+        { name: 'rightThumb1', idx: 23, parent: 'rightHand' },
+        { name: 'rightThumb2', idx: 24, parent: 'rightThumb1' },
+        { name: 'rightIndex1', idx: 25, parent: 'rightHand' },
+        { name: 'rightIndex2', idx: 26, parent: 'rightIndex1' },
+        { name: 'rightMiddle1', idx: 27, parent: 'rightHand' },
+        { name: 'rightMiddle2', idx: 28, parent: 'rightMiddle1' },
+
+        // Left Leg Chain
+        { name: 'leftThigh', idx: 29, parent: 'hips' },
+        { name: 'leftShin', idx: 30, parent: 'leftThigh' },
+        { name: 'leftAnkle', idx: 31, parent: 'leftShin' },
+        { name: 'leftFoot', idx: 32, parent: 'leftAnkle' },
+        { name: 'leftToe', idx: 33, parent: 'leftFoot' },
+
+        // Right Leg Chain
+        { name: 'rightThigh', idx: 34, parent: 'hips' },
+        { name: 'rightShin', idx: 35, parent: 'rightThigh' },
+        { name: 'rightAnkle', idx: 36, parent: 'rightShin' },
+        { name: 'rightFoot', idx: 37, parent: 'rightAnkle' },
+        { name: 'rightToe', idx: 38, parent: 'rightFoot' },
       ];
 
-      // 스켈레톤 구조 직접 참조
-      const spine = hips.children[0];
-      const chest = spine?.children[0];
-      const head = chest?.children.find(c => c.position.y > 0.2);
-      const leftUpperArm = chest?.children.find(c => c.position.x < 0);
-      const leftForearm = leftUpperArm?.children[0];
-      const rightUpperArm = chest?.children.find(c => c.position.x > 0);
-      const rightForearm = rightUpperArm?.children[0];
-      const leftThigh = hips.children.find(c => c.position.x < 0 && c.position.y < 0.5);
-      const leftShin = leftThigh?.children[0];
-      const rightThigh = hips.children.find(c => c.position.x > 0 && c.position.y < 0.5);
-      const rightShin = rightThigh?.children[0];
+      // 확장된 스켈레톤 구조 직접 참조 (name 기반)
+      const findBoneByName = (parent, name) => {
+        if (!parent || !parent.children) return null;
+        for (const child of parent.children) {
+          if (child.name === name) return child;
+          const found = findBoneByName(child, name);
+          if (found) return found;
+        }
+        return null;
+      };
 
       const boneMap = {
         hips: hips,
-        spine: spine,
-        chest: chest,
-        head: head,
-        leftUpperArm: leftUpperArm,
-        leftForearm: leftForearm,
-        rightUpperArm: rightUpperArm,
-        rightForearm: rightForearm,
-        leftThigh: leftThigh,
-        leftShin: leftShin,
-        rightThigh: rightThigh,
-        rightShin: rightShin
+        spine: findBoneByName(hips, 'spine'),
+        spine1: findBoneByName(hips, 'spine1'),
+        spine2: findBoneByName(hips, 'spine2'),
+        chest: findBoneByName(hips, 'chest'),
+        neck: findBoneByName(hips, 'neck'),
+        head: findBoneByName(hips, 'head'),
+
+        leftShoulder: findBoneByName(hips, 'leftShoulder'),
+        leftUpperArm: findBoneByName(hips, 'leftUpperArm'),
+        leftForearm: findBoneByName(hips, 'leftForearm'),
+        leftWrist: findBoneByName(hips, 'leftWrist'),
+        leftHand: findBoneByName(hips, 'leftHand'),
+        leftThumb1: findBoneByName(hips, 'leftThumb1'),
+        leftThumb2: findBoneByName(hips, 'leftThumb2'),
+        leftIndex1: findBoneByName(hips, 'leftIndex1'),
+        leftIndex2: findBoneByName(hips, 'leftIndex2'),
+        leftMiddle1: findBoneByName(hips, 'leftMiddle1'),
+        leftMiddle2: findBoneByName(hips, 'leftMiddle2'),
+
+        rightShoulder: findBoneByName(hips, 'rightShoulder'),
+        rightUpperArm: findBoneByName(hips, 'rightUpperArm'),
+        rightForearm: findBoneByName(hips, 'rightForearm'),
+        rightWrist: findBoneByName(hips, 'rightWrist'),
+        rightHand: findBoneByName(hips, 'rightHand'),
+        rightThumb1: findBoneByName(hips, 'rightThumb1'),
+        rightThumb2: findBoneByName(hips, 'rightThumb2'),
+        rightIndex1: findBoneByName(hips, 'rightIndex1'),
+        rightIndex2: findBoneByName(hips, 'rightIndex2'),
+        rightMiddle1: findBoneByName(hips, 'rightMiddle1'),
+        rightMiddle2: findBoneByName(hips, 'rightMiddle2'),
+
+        leftThigh: findBoneByName(hips, 'leftThigh'),
+        leftShin: findBoneByName(hips, 'leftShin'),
+        leftAnkle: findBoneByName(hips, 'leftAnkle'),
+        leftFoot: findBoneByName(hips, 'leftFoot'),
+        leftToe: findBoneByName(hips, 'leftToe'),
+
+        rightThigh: findBoneByName(hips, 'rightThigh'),
+        rightShin: findBoneByName(hips, 'rightShin'),
+        rightAnkle: findBoneByName(hips, 'rightAnkle'),
+        rightFoot: findBoneByName(hips, 'rightFoot'),
+        rightToe: findBoneByName(hips, 'rightToe')
       };
 
       jointMap.forEach(({ name, idx }) => {
@@ -431,7 +709,7 @@ const TimelineTrack = ({ label, color, segments, active, onSelect, onUpdate, bea
 
   return (
     <div className="flex h-12 border-b border-slate-800 bg-slate-900/50 relative group">
-      <div className="w-32 flex-shrink-0 border-r border-slate-700 flex items-center px-4 text-xs font-mono text-slate-400 bg-slate-900 z-10">
+      <div className="w-32 flex-shrink-0 border-r border-[#303030] flex items-center px-4 text-xs font-mono text-[#c0c0c0] bg-[#0a0a0a]/95 z-10">
         {label}
       </div>
       <div className="flex-1 relative overflow-hidden">
@@ -965,21 +1243,21 @@ export default function SotaDanceStudio() {
         />
       )}
       
-      <nav className="h-12 border-b border-slate-800 bg-[#0a0a0a] flex items-center justify-between px-4 select-none">
+      <nav className="h-12 border-b border-[#2a2a2e] bg-[#0a0a0a]/95 backdrop-blur-lg flex items-center justify-between px-4 select-none shadow-lg">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-pink-500 font-bold tracking-tighter text-lg">
+          <div className="flex items-center gap-2 text-[#c0c0c0] font-bold tracking-tighter text-lg">
             <Layers className="fill-current" /> SOTA<span className="text-white">STUDIO</span>
           </div>
           <div className="h-4 w-[1px] bg-slate-700 mx-2"></div>
-          <div className="flex gap-1 bg-slate-900 p-1 rounded-lg">
+          <div className="flex gap-1 bg-black/40 backdrop-blur-md p-1 rounded-lg border border-[#2a2a2e]">
             {['generation', 'editing', 'rigging'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-3 py-1 text-xs font-medium rounded transition ${
                   activeTab === tab
-                    ? 'bg-pink-500 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    ? 'bg-gradient-to-r from-[#606060] to-[#404040] text-white shadow-lg border border-[#808080]'
+                    : 'text-[#a0a0a0] hover:text-white hover:bg-[#1a1a1a] border border-transparent'
                 }`}
               >
                 {tab === 'generation' ? '생성' : tab === 'editing' ? '편집' : '리깅'}
@@ -988,29 +1266,29 @@ export default function SotaDanceStudio() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="text-xs text-slate-400 font-mono">
+          <div className="text-xs text-[#a0a0a0] font-mono">
             MEM: 2.4GB | Latency: 12ms
           </div>
           <div className="relative group">
-            <button className="px-3 py-1.5 bg-pink-500 hover:bg-pink-600 text-white text-xs font-medium rounded transition flex items-center gap-2">
+            <button className="px-3 py-1.5 bg-gradient-to-r from-[#707070] via-[#505050] to-[#606060] hover:from-[#808080] hover:via-[#606060] hover:to-[#707070] text-white text-xs font-medium rounded transition flex items-center gap-2 shadow-lg border border-[#909090]/50">
               <Download size={14} />
               내보내기
             </button>
-            <div className="absolute right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-              <button onClick={() => handleExportFBX('json')} className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-700">JSON</button>
-              <button onClick={() => handleExportFBX('bvh')} className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-700">BVH</button>
-              <button onClick={() => handleExportFBX('fbx')} className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-700">FBX</button>
+            <div className="absolute right-0 top-full mt-1 bg-[#1a1a1a]/95 backdrop-blur-lg border border-[#404040] rounded shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              <button onClick={() => handleExportFBX('json')} className="block w-full text-left px-4 py-2 text-sm text-[#d0d0d0] hover:bg-[#2a2a2a] hover:text-white transition">JSON</button>
+              <button onClick={() => handleExportFBX('bvh')} className="block w-full text-left px-4 py-2 text-sm text-[#d0d0d0] hover:bg-[#2a2a2a] hover:text-white transition">BVH</button>
+              <button onClick={() => handleExportFBX('fbx')} className="block w-full text-left px-4 py-2 text-sm text-[#d0d0d0] hover:bg-[#2a2a2a] hover:text-white transition">FBX</button>
             </div>
           </div>
         </div>
       </nav>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className="w-80 bg-[#0a0a0a] border-r border-slate-800 flex flex-col overflow-y-auto">
+        <aside className="w-80 bg-[#0a0a0a]/90 backdrop-blur-xl border-r border-[#2a2a2e] flex flex-col overflow-y-auto shadow-2xl">
           {activeTab === 'generation' && (
             <div className="p-4 space-y-6">
               <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">STEP 1: 음악 업로드</h3>
+                <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 tracking-wider">STEP 1: 음악 업로드</h3>
                 <input
                   type="file"
                   accept="audio/*"
@@ -1022,7 +1300,7 @@ export default function SotaDanceStudio() {
                   htmlFor="audio-upload"
                   className="block w-full p-4 border-2 border-dashed border-slate-700 rounded-lg text-center cursor-pointer hover:border-pink-500 transition"
                 >
-                  <Video size={24} className="mx-auto mb-2 text-slate-400" />
+                  <Video size={24} className="mx-auto mb-2 text-[#808080]" />
                   <div className="text-sm text-slate-300">음악 파일 선택</div>
                   {audioFile && <div className="text-xs text-slate-500 mt-1">{audioFile.name}</div>}
                 </label>
@@ -1045,7 +1323,7 @@ export default function SotaDanceStudio() {
               </div>
 
               <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">STEP 2: 안무 프롬프트 입력</h3>
+                <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 tracking-wider">STEP 2: 안무 프롬프트 입력</h3>
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
@@ -1056,7 +1334,7 @@ export default function SotaDanceStudio() {
               </div>
 
               <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">STYLE</h3>
+                <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 tracking-wider">STYLE</h3>
                 <select
                   value={selectedStyle}
                   onChange={(e) => setSelectedStyle(e.target.value)}
@@ -1073,7 +1351,7 @@ export default function SotaDanceStudio() {
               </div>
 
               <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">부분 고정 (IN-PAINTING)</h3>
+                <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 tracking-wider">부분 고정 (IN-PAINTING)</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {['head', 'spine', 'arms', 'legs'].map(part => (
                     <button
@@ -1093,7 +1371,7 @@ export default function SotaDanceStudio() {
               </div>
 
               <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 flex items-center gap-2 tracking-wider">
                   <Sliders size={12} /> DIFFUSION PARAMETERS
                 </h3>
                 <div className="space-y-4">
@@ -1105,8 +1383,8 @@ export default function SotaDanceStudio() {
                   ].map(({ key, label, value }) => (
                     <div key={key}>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-400">{label}</span>
-                        <span className="text-pink-400">{Math.round(value * 100)}%</span>
+                        <span className="text-[#b0b0b0]">{label}</span>
+                        <span className="text-[#e0e0e0] font-semibold">{Math.round(value * 100)}%</span>
                       </div>
                       <input
                         type="range"
@@ -1125,7 +1403,7 @@ export default function SotaDanceStudio() {
               <button
                 onClick={handleGenerateMotion}
                 disabled={isGenerating || !audioFile || !audioAnalysis}
-                className="w-full p-4 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full p-4 bg-gradient-to-r from-[#808080] via-[#606060] to-[#707070] hover:from-[#909090] hover:via-[#707070] hover:to-[#808080] text-white font-bold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-xl border border-[#a0a0a0]/50"
               >
                 {isGenerating ? (
                   <>
@@ -1144,11 +1422,11 @@ export default function SotaDanceStudio() {
 
           {activeTab === 'editing' && (
             <div className="p-4 space-y-4">
-              <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">모션 편집</h3>
+              <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 tracking-wider">모션 편집</h3>
               {selectedMotion ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">시작 시간 (초)</label>
+                    <label className="text-xs text-[#b0b0b0] block mb-1">시작 시간 (초)</label>
                     <input
                       type="number"
                       value={localStartTime}
@@ -1172,7 +1450,7 @@ export default function SotaDanceStudio() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">지속 시간 (초)</label>
+                    <label className="text-xs text-[#b0b0b0] block mb-1">지속 시간 (초)</label>
                     <input
                       type="number"
                       value={localDuration}
@@ -1202,31 +1480,31 @@ export default function SotaDanceStudio() {
                         motion: prev.motion.filter(m => m.id !== selectedMotion.id)
                       }));
                     }}
-                    className="w-full p-2 bg-red-500/20 border border-red-500 text-red-400 rounded text-sm hover:bg-red-500/30 transition"
+                    className="w-full p-2 bg-gradient-to-r from-red-600/20 to-red-700/20 border border-red-500 text-red-400 rounded text-sm hover:from-red-600/30 hover:to-red-700/30 transition shadow-lg shadow-red-500/10"
                   >
                     삭제
                   </button>
                 </div>
               ) : (
-                <div className="text-sm text-slate-400 text-center py-8">선택된 모션이 없습니다</div>
+                <div className="text-sm text-[#909090] text-center py-8">선택된 모션이 없습니다</div>
               )}
             </div>
           )}
 
           {activeTab === 'rigging' && (
             <div className="p-4">
-              <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">리깅</h3>
-              <div className="text-sm text-slate-400 text-center py-8">리깅 기능은 준비 중입니다</div>
+              <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 tracking-wider">리깅</h3>
+              <div className="text-sm text-[#909090] text-center py-8">리깅 기능은 준비 중입니다</div>
             </div>
           )}
         </aside>
 
-        <main className="flex-1 flex flex-col relative bg-[#0f0f0f]">
+        <main className="flex-1 flex flex-col relative bg-[#050505]">
           <div className="absolute top-4 left-4 z-10 flex gap-2">
-            <button onClick={()=>setViewMode('render')} className={`p-2 rounded-md backdrop-blur-md border ${viewMode==='render' ? 'bg-white/10 border-white/30 text-white':'bg-black/50 border-white/5 text-slate-400'}`}>
+            <button onClick={()=>setViewMode('render')} className={`p-2 rounded-md backdrop-blur-md border ${viewMode==='render' ? 'bg-gradient-to-r from-[#505050] to-[#404040] border-[#707070] text-white shadow-lg':'bg-black/50 border-[#303030] text-[#808080] hover:text-[#c0c0c0]'}`}>
               <Video size={16}/>
             </button>
-            <button onClick={()=>setViewMode('skeleton')} className={`p-2 rounded-md backdrop-blur-md border ${viewMode==='skeleton' ? 'bg-white/10 border-white/30 text-white':'bg-black/50 border-white/5 text-slate-400'}`}>
+            <button onClick={()=>setViewMode('skeleton')} className={`p-2 rounded-md backdrop-blur-md border ${viewMode==='skeleton' ? 'bg-gradient-to-r from-[#505050] to-[#404040] border-[#707070] text-white shadow-lg':'bg-black/50 border-[#303030] text-[#808080] hover:text-[#c0c0c0]'}`}>
               <Bone size={16}/>
             </button>
           </div>
@@ -1243,13 +1521,13 @@ export default function SotaDanceStudio() {
             />
           </div>
 
-          <div className="h-64 bg-[#0a0a0a] border-t border-slate-800 flex flex-col">
+          <div className="h-64 bg-[#0a0a0a]/90 backdrop-blur-xl border-t border-[#2a2a2e] flex flex-col shadow-2xl">
             <div className="h-10 border-b border-slate-800 flex items-center justify-between px-4 bg-slate-900/80">
               <div className="flex items-center gap-4">
                 <button onClick={() => setIsPlaying(!isPlaying)} className="text-white hover:text-pink-400 transition">
                   {isPlaying ? <Pause size={20} fill="currentColor"/> : <Play size={20} fill="currentColor"/>}
                 </button>
-                <div className="flex gap-2 text-slate-400">
+                <div className="flex gap-2 text-[#a0a0a0]">
                   <button onClick={() => handleSkip('back')} className="hover:text-white transition cursor-pointer">
                     <SkipBack size={16}/>
                   </button>
@@ -1347,9 +1625,9 @@ export default function SotaDanceStudio() {
           </div>
         </main>
 
-        <aside className="w-64 bg-[#0a0a0a] border-l border-slate-800 hidden xl:flex flex-col">
+        <aside className="w-64 bg-[#0a0a0a]/90 backdrop-blur-xl border-l border-[#2a2a2e] hidden xl:flex flex-col shadow-2xl">
           <div className="p-4 border-b border-slate-800">
-            <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+            <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 flex items-center gap-2 tracking-wider">
               <Users size={12} /> FORMATION VIEW
             </h3>
             <div className="aspect-square bg-slate-900 rounded-lg border border-slate-800 relative p-4 flex items-center justify-center overflow-hidden cursor-crosshair">
@@ -1360,10 +1638,10 @@ export default function SotaDanceStudio() {
               </div>
             </div>
             <div className="mt-3 flex gap-2">
-              <button className="flex-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded transition">
+              <button className="flex-1 px-3 py-1.5 bg-gradient-to-r from-[#3a3a3a] to-[#2a2a2a] hover:from-[#4a4a4a] hover:to-[#3a3a3a] text-xs rounded transition border border-[#505050] text-[#c0c0c0]">
                 Reset
               </button>
-              <button className="flex-1 px-3 py-1.5 bg-pink-500 hover:bg-pink-600 text-white text-xs rounded transition">
+              <button className="flex-1 px-3 py-1.5 bg-gradient-to-r from-[#707070] to-[#505050] hover:from-[#808080] hover:to-[#606060] text-white text-xs rounded transition border border-[#909090]/50 shadow-lg">
                 Save
               </button>
             </div>

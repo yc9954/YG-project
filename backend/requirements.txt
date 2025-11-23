@@ -13,6 +13,10 @@ torchaudio>=2.1.0
 transformers>=4.35.0
 diffusers>=0.24.0
 
+# 비디오 처리 및 포즈 추정
+opencv-python>=4.8.0
+mediapipe>=0.10.0
+
 # EDGE 최적화
 onnx>=1.15.0
 onnxruntime>=1.16.0

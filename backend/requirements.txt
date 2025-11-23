@@ -8,9 +8,22 @@ scipy>=1.11.4
 Pillow>=10.1.0
 
 # AI 모델 (MDM 사용 시 필요)
-# torch와 torchaudio는 시스템에 맞게 별도 설치 권장
-# torch>=2.1.0
-# torchaudio>=2.1.0
+torch>=2.1.0
+torchaudio>=2.1.0
+transformers>=4.35.0
+diffusers>=0.24.0
+
+# EDGE 최적화
+onnx>=1.15.0
+onnxruntime>=1.16.0
+torch-pruning>=1.3.0
+
+# 학습 모니터링 (선택사항)
+wandb>=0.16.0
+tensorboard>=2.15.0
 
 # 오디오 처리 (선택사항 - 더 정확한 비트 감지)
 # madmom==0.16.1
+
+# Colab 환경 지원
+# google-colab  # Colab에서 자동 설치됨

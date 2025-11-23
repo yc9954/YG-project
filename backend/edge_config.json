@@ -1,0 +1,54 @@
+{
+  "optimization": {
+    "quantization": {
+      "enabled": true,
+      "dtype": "int8",
+      "calibration_samples": 100
+    },
+    "pruning": {
+      "enabled": true,
+      "sparsity": 0.3,
+      "method": "magnitude"
+    },
+    "distillation": {
+      "enabled": false,
+      "teacher_model_path": null,
+      "temperature": 3.0,
+      "alpha": 0.7
+    }
+  },
+  "export": {
+    "formats": ["onnx", "torchscript"],
+    "onnx": {
+      "opset_version": 14,
+      "dynamic_axes": {
+        "input": {
+          "0": "batch_size",
+          "3": "sequence_length"
+        },
+        "output": {
+          "0": "batch_size",
+          "3": "sequence_length"
+        }
+      }
+    },
+    "torchscript": {
+      "method": "trace",
+      "example_inputs": true
+    }
+  },
+  "inference": {
+    "device": "cpu",
+    "num_threads": 4,
+    "use_fp16": false,
+    "batch_size": 1
+  },
+  "checkpoint": {
+    "save_dir": "checkpoints",
+    "save_interval": 1000,
+    "max_checkpoints": 5,
+    "save_optimizer": true,
+    "google_drive_sync": true,
+    "drive_folder": "MDM_Checkpoints"
+  }
+}

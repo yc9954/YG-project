@@ -80,3 +80,127 @@
 - 프론트엔드: `✅ 모션 생성 완료`
 - 타임라인에 모션이 추가됨
 
+---
+
+## 📦 패키지 및 의존성 문제
+
+### MediaPipe 관련 오류
+
+#### ❌ `NameError: name 'core' is not defined`
+
+**원인**: MediaPipe와 Python 버전 호환성 문제 (특히 Python 3.12)
+
+**해결 방법**:
+
+##### 방법 1: MediaPipe 버전 업데이트 (권장)
+```bash
+pip uninstall mediapipe
+pip install mediapipe==0.10.9
+```
+
+##### 방법 2: Google Colab에서
+```python
+# 노트북 셀에서 실행
+!pip install -q opencv-python-headless==4.9.0.80
+!pip install -q mediapipe==0.10.9
+
+# Runtime 재시작 필요
+# Runtime > Restart runtime
+```
+
+##### 방법 3: Python 다운그레이드
+```bash
+# Python 3.11 사용 (가장 안정적)
+pyenv install 3.11.7
+pyenv local 3.11.7
+```
+
+#### ❌ `ImportError: cannot import name 'core'`
+
+**원인**: MediaPipe 패키지 손상 또는 불완전한 설치
+
+**해결 방법**:
+```bash
+# 완전 제거 및 재설치
+pip uninstall -y mediapipe opencv-python opencv-python-headless
+pip cache purge
+pip install opencv-python-headless==4.9.0.80
+pip install mediapipe==0.10.9
+```
+
+### OpenCV 관련 오류
+
+#### ❌ `ImportError: libGL.so.1: cannot open shared object file`
+
+**원인**: 서버/Docker 환경에서 GUI 라이브러리 누락
+
+**해결 방법**:
+```bash
+# Ubuntu/Debian
+apt-get update
+apt-get install -y libgl1-mesa-glx libglib2.0-0
+
+# opencv-python 대신 headless 버전 사용
+pip install opencv-python-headless
+```
+
+### CUDA/PyTorch 관련 오류
+
+#### ❌ `RuntimeError: CUDA out of memory`
+
+**해결 방법**:
+1. Batch size 줄이기:
+```python
+config.batch_size = 2  # 기본값 4에서 줄이기
+```
+
+2. 모델 복잡도 낮추기:
+```python
+mp_pose.Pose(
+    model_complexity=1,  # 2 대신 1 사용
+)
+```
+
+### 권장 패키지 버전
+
+#### Python 3.11 (가장 안정적)
+```txt
+torch>=2.1.0
+mediapipe==0.10.9
+opencv-python-headless==4.9.0.80
+numpy>=1.26.0
+```
+
+#### Python 3.12 (최신)
+```txt
+torch>=2.1.0
+mediapipe==0.10.9  # 필수!
+opencv-python-headless==4.9.0.80
+numpy>=1.26.0
+```
+
+### 디버깅 팁
+
+#### 버전 확인
+```python
+import sys
+import torch
+import mediapipe as mp
+import cv2
+
+print(f"Python: {sys.version}")
+print(f"PyTorch: {torch.__version__}")
+print(f"MediaPipe: {mp.__version__}")
+print(f"OpenCV: {cv2.__version__}")
+print(f"CUDA: {torch.cuda.is_available()}")
+```
+
+#### MediaPipe 단독 테스트
+```python
+import mediapipe as mp
+mp_pose = mp.solutions.pose
+pose = mp_pose.Pose()
+print("✅ MediaPipe 정상 작동")
+pose.close()
+```
+

@@ -13,9 +13,10 @@ torchaudio>=2.1.0
 transformers>=4.35.0
 diffusers>=0.24.0
 
-# 비디오 처리 및 포즈 추정
+# 비디오 처리 및 포즈 추정 (Python 3.12 호환)
 opencv-python>=4.8.0
-mediapipe>=0.10.0
+opencv-python-headless>=4.8.0  # Colab/서버 환경용
+mediapipe>=0.10.9  # Python 3.12 지원 버전
 
 # EDGE 최적화
 onnx>=1.15.0

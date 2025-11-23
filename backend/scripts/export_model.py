@@ -162,7 +162,7 @@ class ModelExporter:
             batch_size = 1
             num_features = self.model.nfeats
             num_joints = self.model.njoints
-            seq_len = 196  # HumanML3D 기본 프레임 수
+            seq_len = 6000  # 최대 프레임 수 (5분 영상, 동적 축으로 가변 길이 지원)
 
             # 모델 입력 형식에 맞게 조정
             dummy_input = torch.randn(batch_size, num_joints, num_features, seq_len).to(self.device)
@@ -225,7 +225,7 @@ class ModelExporter:
             batch_size = 1
             num_features = self.model.nfeats
             num_joints = self.model.njoints
-            seq_len = 196
+            seq_len = 6000  # 최대 프레임 수 (5분 영상 지원)
 
             dummy_input = torch.randn(batch_size, num_joints, num_features, seq_len).to(self.device)
 

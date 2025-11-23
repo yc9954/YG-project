@@ -107,7 +107,7 @@ class MDMIntegration:
         try:
             print("📥 데이터 로더 생성 중...")
             abs_path = str(mdm_repo_path)
-            
+
             # 작업 디렉토리를 MDM 저장소로 변경 (상대 경로 문제 해결)
             original_cwd = os.getcwd()
             try:
@@ -115,7 +115,7 @@ class MDMIntegration:
                 data = get_dataset_loader(
                     name=self.args.dataset,
                     batch_size=self.args.batch_size,
-                    num_frames=196,
+                    num_frames=6000,  # 5분 영상 지원 (300초 × 20fps)
                     split='test',
                     hml_mode='text_only'
                 )
@@ -169,7 +169,7 @@ class MDMIntegration:
             
             # 프레임 수 계산
             fps = 20.0 if self.args.dataset == 'humanml' else 12.5
-            max_frames = 196 if self.args.dataset in ['kit', 'humanml'] else 60
+            max_frames = 6000 if self.args.dataset in ['kit', 'humanml'] else 60  # 5분 영상 지원
             n_frames = min(max_frames, int(length * fps))
             
             # 텍스트 설정

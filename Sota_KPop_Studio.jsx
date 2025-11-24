@@ -25,8 +25,8 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
     if (!containerRef.current) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#050505'); // Deep Black
-    scene.fog = new THREE.Fog('#050505', 8, 25);
+    scene.background = new THREE.Color('#0a0a0a'); // Slightly lighter black for contrast
+    scene.fog = new THREE.Fog('#0a0a0a', 10, 30);
 
     const camera = new THREE.PerspectiveCamera(50, containerRef.current.clientWidth / containerRef.current.clientHeight, 0.1, 100);
     camera.position.set(0, 2, 5);
@@ -133,212 +133,212 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
     hips.name = 'hips';
     dancerGroup.add(hips);
 
-    // Spine Chain
-    const spine = createBone(0.15, 0x2a2a2a, locks.spine);
+    // Spine Chain (Matte Black Rubber)
+    const spine = createBone(0.12, 0x1a1a1a, locks.spine);
     spine.position.y = 0;
     spine.name = 'spine';
     hips.add(spine);
 
-    const spine1 = createBone(0.15, 0x2a2a2a, locks.spine);
-    spine1.position.y = 0.15;
+    const spine1 = createBone(0.12, 0x252525, locks.spine);
+    spine1.position.y = 0.12;
     spine1.name = 'spine1';
     spine.add(spine1);
 
-    const spine2 = createBone(0.15, 0x2a2a2a, locks.spine);
-    spine2.position.y = 0.15;
+    const spine2 = createBone(0.12, 0x303030, locks.spine);
+    spine2.position.y = 0.12;
     spine2.name = 'spine2';
     spine1.add(spine2);
 
-    const chest = createBone(0.2, 0xc0c0c0, locks.spine);
-    chest.position.y = 0.15;
+    const chest = createBone(0.15, 0xd0d0d0, locks.spine); // Polished Chrome
+    chest.position.y = 0.12;
     chest.name = 'chest';
     spine2.add(chest);
 
-    const neck = createBone(0.1, 0xc0c0c0, locks.head);
-    neck.position.y = 0.2;
+    const neck = createBone(0.08, 0xe0e0e0, locks.head); // Bright Chrome
+    neck.position.y = 0.15;
     neck.name = 'neck';
     chest.add(neck);
 
-    const head = createBone(0.2, 0xe0e0e0, locks.head);
-    head.position.y = 0.1;
+    const head = createBone(0.18, 0xf0f0f0, locks.head); // Brightest Chrome
+    head.position.y = 0.08;
     head.name = 'head';
     neck.add(head);
 
-    // Left Arm Chain
-    const leftShoulder = createBone(0.08, 0xa0a0a0, locks.arms);
-    leftShoulder.position.set(-0.2, 0.15, 0);
-    leftShoulder.rotation.z = Math.PI / 2;
+    // Left Arm Chain (Chrome gradient)
+    const leftShoulder = createBone(0.06, 0xd0d0d0, locks.arms);
+    leftShoulder.position.set(-0.18, 0.12, 0);
+    leftShoulder.rotation.z = Math.PI / 6;
     leftShoulder.name = 'leftShoulder';
     chest.add(leftShoulder);
 
-    const leftUpperArm = createBone(0.3, 0x808080, locks.arms);
-    leftUpperArm.position.set(0, 0.08, 0);
-    leftUpperArm.rotation.z = -Math.PI / 2;
+    const leftUpperArm = createBone(0.28, 0xb8b8b8, locks.arms);
+    leftUpperArm.position.y = 0.06;
+    leftUpperArm.rotation.z = -0.2;
     leftUpperArm.name = 'leftUpperArm';
     leftShoulder.add(leftUpperArm);
 
-    const leftForearm = createBone(0.28, 0x606060, locks.arms);
-    leftForearm.position.y = 0.3;
+    const leftForearm = createBone(0.26, 0xa0a0a0, locks.arms);
+    leftForearm.position.y = 0.28;
     leftForearm.name = 'leftForearm';
     leftUpperArm.add(leftForearm);
 
-    const leftWrist = createBone(0.05, 0x505050, locks.arms);
-    leftWrist.position.y = 0.28;
+    const leftWrist = createBone(0.04, 0x909090, locks.arms);
+    leftWrist.position.y = 0.26;
     leftWrist.name = 'leftWrist';
     leftForearm.add(leftWrist);
 
-    const leftHand = createBone(0.08, 0x404040, locks.arms);
-    leftHand.position.y = 0.05;
+    const leftHand = createBone(0.07, 0x707070, locks.arms);
+    leftHand.position.y = 0.04;
     leftHand.name = 'leftHand';
     leftWrist.add(leftHand);
 
-    // Left Fingers
-    const leftThumb1 = createBone(0.03, 0xc0c0c0, locks.arms);
-    leftThumb1.position.set(0.02, 0.08, 0);
-    leftThumb1.rotation.z = -0.5;
+    // Left Fingers (Chrome)
+    const leftThumb1 = createBone(0.025, 0xe0e0e0, locks.arms);
+    leftThumb1.position.set(0.015, 0.07, 0.01);
+    leftThumb1.rotation.z = -0.4;
     leftThumb1.name = 'leftThumb1';
     leftHand.add(leftThumb1);
 
-    const leftThumb2 = createBone(0.02, 0xc0c0c0, locks.arms);
-    leftThumb2.position.y = 0.03;
+    const leftThumb2 = createBone(0.018, 0xd8d8d8, locks.arms);
+    leftThumb2.position.y = 0.025;
     leftThumb2.name = 'leftThumb2';
     leftThumb1.add(leftThumb2);
 
-    const leftIndex1 = createBone(0.035, 0xb0b0b0, locks.arms);
-    leftIndex1.position.set(0.01, 0.08, 0);
-    leftIndex1.rotation.z = -0.1;
+    const leftIndex1 = createBone(0.03, 0xd0d0d0, locks.arms);
+    leftIndex1.position.set(0.008, 0.07, 0.003);
+    leftIndex1.rotation.z = -0.05;
     leftIndex1.name = 'leftIndex1';
     leftHand.add(leftIndex1);
 
-    const leftIndex2 = createBone(0.025, 0xb0b0b0, locks.arms);
-    leftIndex2.position.y = 0.035;
+    const leftIndex2 = createBone(0.022, 0xc8c8c8, locks.arms);
+    leftIndex2.position.y = 0.03;
     leftIndex2.name = 'leftIndex2';
     leftIndex1.add(leftIndex2);
 
-    const leftMiddle1 = createBone(0.04, 0xa0a0a0, locks.arms);
-    leftMiddle1.position.set(0, 0.08, 0);
+    const leftMiddle1 = createBone(0.032, 0xc0c0c0, locks.arms);
+    leftMiddle1.position.set(0, 0.07, 0);
     leftMiddle1.name = 'leftMiddle1';
     leftHand.add(leftMiddle1);
 
-    const leftMiddle2 = createBone(0.03, 0xa0a0a0, locks.arms);
-    leftMiddle2.position.y = 0.04;
+    const leftMiddle2 = createBone(0.025, 0xb8b8b8, locks.arms);
+    leftMiddle2.position.y = 0.032;
     leftMiddle2.name = 'leftMiddle2';
     leftMiddle1.add(leftMiddle2);
 
-    // Right Arm Chain
-    const rightShoulder = createBone(0.08, 0xa0a0a0, locks.arms);
-    rightShoulder.position.set(0.2, 0.15, 0);
-    rightShoulder.rotation.z = -Math.PI / 2;
+    // Right Arm Chain (Chrome gradient)
+    const rightShoulder = createBone(0.06, 0xd0d0d0, locks.arms);
+    rightShoulder.position.set(0.18, 0.12, 0);
+    rightShoulder.rotation.z = -Math.PI / 6;
     rightShoulder.name = 'rightShoulder';
     chest.add(rightShoulder);
 
-    const rightUpperArm = createBone(0.3, 0x808080, locks.arms);
-    rightUpperArm.position.set(0, 0.08, 0);
-    rightUpperArm.rotation.z = Math.PI / 2;
+    const rightUpperArm = createBone(0.28, 0xb8b8b8, locks.arms);
+    rightUpperArm.position.y = 0.06;
+    rightUpperArm.rotation.z = 0.2;
     rightUpperArm.name = 'rightUpperArm';
     rightShoulder.add(rightUpperArm);
 
-    const rightForearm = createBone(0.28, 0x606060, locks.arms);
-    rightForearm.position.y = 0.3;
+    const rightForearm = createBone(0.26, 0xa0a0a0, locks.arms);
+    rightForearm.position.y = 0.28;
     rightForearm.name = 'rightForearm';
     rightUpperArm.add(rightForearm);
 
-    const rightWrist = createBone(0.05, 0x505050, locks.arms);
-    rightWrist.position.y = 0.28;
+    const rightWrist = createBone(0.04, 0x909090, locks.arms);
+    rightWrist.position.y = 0.26;
     rightWrist.name = 'rightWrist';
     rightForearm.add(rightWrist);
 
-    const rightHand = createBone(0.08, 0x404040, locks.arms);
-    rightHand.position.y = 0.05;
+    const rightHand = createBone(0.07, 0x707070, locks.arms);
+    rightHand.position.y = 0.04;
     rightHand.name = 'rightHand';
     rightWrist.add(rightHand);
 
-    // Right Fingers
-    const rightThumb1 = createBone(0.03, 0xc0c0c0, locks.arms);
-    rightThumb1.position.set(-0.02, 0.08, 0);
-    rightThumb1.rotation.z = 0.5;
+    // Right Fingers (Chrome)
+    const rightThumb1 = createBone(0.025, 0xe0e0e0, locks.arms);
+    rightThumb1.position.set(-0.015, 0.07, 0.01);
+    rightThumb1.rotation.z = 0.4;
     rightThumb1.name = 'rightThumb1';
     rightHand.add(rightThumb1);
 
-    const rightThumb2 = createBone(0.02, 0xc0c0c0, locks.arms);
-    rightThumb2.position.y = 0.03;
+    const rightThumb2 = createBone(0.018, 0xd8d8d8, locks.arms);
+    rightThumb2.position.y = 0.025;
     rightThumb2.name = 'rightThumb2';
     rightThumb1.add(rightThumb2);
 
-    const rightIndex1 = createBone(0.035, 0xb0b0b0, locks.arms);
-    rightIndex1.position.set(-0.01, 0.08, 0);
-    rightIndex1.rotation.z = 0.1;
+    const rightIndex1 = createBone(0.03, 0xd0d0d0, locks.arms);
+    rightIndex1.position.set(-0.008, 0.07, 0.003);
+    rightIndex1.rotation.z = 0.05;
     rightIndex1.name = 'rightIndex1';
     rightHand.add(rightIndex1);
 
-    const rightIndex2 = createBone(0.025, 0xb0b0b0, locks.arms);
-    rightIndex2.position.y = 0.035;
+    const rightIndex2 = createBone(0.022, 0xc8c8c8, locks.arms);
+    rightIndex2.position.y = 0.03;
     rightIndex2.name = 'rightIndex2';
     rightIndex1.add(rightIndex2);
 
-    const rightMiddle1 = createBone(0.04, 0xa0a0a0, locks.arms);
-    rightMiddle1.position.set(0, 0.08, 0);
+    const rightMiddle1 = createBone(0.032, 0xc0c0c0, locks.arms);
+    rightMiddle1.position.set(0, 0.07, 0);
     rightMiddle1.name = 'rightMiddle1';
     rightHand.add(rightMiddle1);
 
-    const rightMiddle2 = createBone(0.03, 0xa0a0a0, locks.arms);
-    rightMiddle2.position.y = 0.04;
+    const rightMiddle2 = createBone(0.025, 0xb8b8b8, locks.arms);
+    rightMiddle2.position.y = 0.032;
     rightMiddle2.name = 'rightMiddle2';
     rightMiddle1.add(rightMiddle2);
 
-    // Left Leg Chain
-    const leftThigh = createBone(0.4, 0x404040, locks.legs);
-    leftThigh.position.set(-0.1, -0.05, 0);
-    leftThigh.rotation.x = 0.1;
+    // Left Leg Chain (Matte Black to Chrome gradient)
+    const leftThigh = createBone(0.38, 0x505050, locks.legs);
+    leftThigh.position.set(-0.09, -0.02, 0);
+    leftThigh.rotation.x = 0.05;
     leftThigh.name = 'leftThigh';
     hips.add(leftThigh);
 
-    const leftShin = createBone(0.38, 0x303030, locks.legs);
-    leftShin.position.y = 0.4;
+    const leftShin = createBone(0.36, 0x404040, locks.legs);
+    leftShin.position.y = 0.38;
     leftShin.name = 'leftShin';
     leftThigh.add(leftShin);
 
-    const leftAnkle = createBone(0.05, 0x505050, locks.legs);
-    leftAnkle.position.y = 0.38;
+    const leftAnkle = createBone(0.04, 0x808080, locks.legs);
+    leftAnkle.position.y = 0.36;
     leftAnkle.name = 'leftAnkle';
     leftShin.add(leftAnkle);
 
-    const leftFoot = createBone(0.08, 0x606060, locks.legs);
-    leftFoot.position.y = 0.05;
-    leftFoot.rotation.x = -1.3;
+    const leftFoot = createBone(0.09, 0xa0a0a0, locks.legs);
+    leftFoot.position.y = 0.04;
+    leftFoot.rotation.x = -Math.PI / 2.2;
     leftFoot.name = 'leftFoot';
     leftAnkle.add(leftFoot);
 
-    const leftToe = createBone(0.04, 0x707070, locks.legs);
-    leftToe.position.y = 0.08;
+    const leftToe = createBone(0.05, 0xc0c0c0, locks.legs);
+    leftToe.position.y = 0.09;
     leftToe.name = 'leftToe';
     leftFoot.add(leftToe);
 
-    // Right Leg Chain
-    const rightThigh = createBone(0.4, 0x404040, locks.legs);
-    rightThigh.position.set(0.1, -0.05, 0);
-    rightThigh.rotation.x = 0.1;
+    // Right Leg Chain (Matte Black to Chrome gradient)
+    const rightThigh = createBone(0.38, 0x505050, locks.legs);
+    rightThigh.position.set(0.09, -0.02, 0);
+    rightThigh.rotation.x = 0.05;
     rightThigh.name = 'rightThigh';
     hips.add(rightThigh);
 
-    const rightShin = createBone(0.38, 0x303030, locks.legs);
-    rightShin.position.y = 0.4;
+    const rightShin = createBone(0.36, 0x404040, locks.legs);
+    rightShin.position.y = 0.38;
     rightShin.name = 'rightShin';
     rightThigh.add(rightShin);
 
-    const rightAnkle = createBone(0.05, 0x505050, locks.legs);
-    rightAnkle.position.y = 0.38;
+    const rightAnkle = createBone(0.04, 0x808080, locks.legs);
+    rightAnkle.position.y = 0.36;
     rightAnkle.name = 'rightAnkle';
     rightShin.add(rightAnkle);
 
-    const rightFoot = createBone(0.08, 0x606060, locks.legs);
-    rightFoot.position.y = 0.05;
-    rightFoot.rotation.x = -1.3;
+    const rightFoot = createBone(0.09, 0xa0a0a0, locks.legs);
+    rightFoot.position.y = 0.04;
+    rightFoot.rotation.x = -Math.PI / 2.2;
     rightFoot.name = 'rightFoot';
     rightAnkle.add(rightFoot);
 
-    const rightToe = createBone(0.04, 0x707070, locks.legs);
-    rightToe.position.y = 0.08;
+    const rightToe = createBone(0.05, 0xc0c0c0, locks.legs);
+    rightToe.position.y = 0.09;
     rightToe.name = 'rightToe';
     rightFoot.add(rightToe);
 
@@ -1207,7 +1207,7 @@ export default function SotaDanceStudio() {
 
   // UI 렌더링
   return (
-    <div className="w-full h-screen bg-[#050505] text-slate-200 font-sans flex flex-col overflow-hidden selection:bg-pink-500 selection:text-white">
+    <div className="w-full h-screen bg-gradient-to-br from-[#000000] via-[#0a0a0a] to-[#050505] text-slate-200 font-sans flex flex-col overflow-hidden selection:bg-gradient-to-r selection:from-[#808080] selection:to-[#606060] selection:text-white">
       {audioUrl && (
         <audio
           ref={audioRef}
@@ -1243,21 +1243,24 @@ export default function SotaDanceStudio() {
         />
       )}
       
-      <nav className="h-12 border-b border-[#2a2a2e] bg-[#0a0a0a]/95 backdrop-blur-lg flex items-center justify-between px-4 select-none shadow-lg">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-[#c0c0c0] font-bold tracking-tighter text-lg">
-            <Layers className="fill-current" /> SOTA<span className="text-white">STUDIO</span>
+      <nav className="h-14 border-b border-[#404040]/30 bg-gradient-to-b from-[#0f0f0f]/95 to-[#080808]/95 backdrop-blur-2xl flex items-center justify-between px-6 select-none shadow-2xl relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a]/20 via-transparent to-[#1a1a1a]/20 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#808080]/50 to-transparent"></div>
+        <div className="flex items-center gap-4 relative z-10">
+          <div className="flex items-center gap-2.5 text-transparent bg-clip-text bg-gradient-to-r from-[#f0f0f0] via-[#e0e0e0] to-[#d0d0d0] font-bold tracking-tight text-xl">
+            <Layers className="text-[#e0e0e0] drop-shadow-[0_0_8px_rgba(224,224,224,0.3)]" size={24} />
+            SOTA<span className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.4)]">STUDIO</span>
           </div>
-          <div className="h-4 w-[1px] bg-slate-700 mx-2"></div>
-          <div className="flex gap-1 bg-black/40 backdrop-blur-md p-1 rounded-lg border border-[#2a2a2e]">
+          <div className="h-5 w-[1px] bg-gradient-to-b from-transparent via-[#505050] to-transparent mx-3"></div>
+          <div className="flex gap-1 bg-gradient-to-b from-[#1a1a1a]/60 to-[#0a0a0a]/80 backdrop-blur-xl p-1.5 rounded-xl border border-[#404040]/40 shadow-inner">
             {['generation', 'editing', 'rigging'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1 text-xs font-medium rounded transition ${
+                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
                   activeTab === tab
-                    ? 'bg-gradient-to-r from-[#606060] to-[#404040] text-white shadow-lg border border-[#808080]'
-                    : 'text-[#a0a0a0] hover:text-white hover:bg-[#1a1a1a] border border-transparent'
+                    ? 'bg-gradient-to-br from-[#707070] via-[#555555] to-[#606060] text-white shadow-[0_0_15px_rgba(128,128,128,0.3)] border border-[#909090]/50 scale-105'
+                    : 'text-[#b0b0b0] hover:text-white hover:bg-gradient-to-br hover:from-[#252525] hover:to-[#1a1a1a] border border-transparent hover:border-[#404040]/30 hover:shadow-lg'
                 }`}
               >
                 {tab === 'generation' ? '생성' : tab === 'editing' ? '편집' : '리깅'}
@@ -1265,19 +1268,35 @@ export default function SotaDanceStudio() {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-xs text-[#a0a0a0] font-mono">
+        <div className="flex items-center gap-5 relative z-10">
+          <div className="text-xs text-[#909090] font-mono bg-[#1a1a1a]/40 px-3 py-1.5 rounded-lg border border-[#303030]/50 backdrop-blur-sm">
             MEM: 2.4GB | Latency: 12ms
           </div>
           <div className="relative group">
-            <button className="px-3 py-1.5 bg-gradient-to-r from-[#707070] via-[#505050] to-[#606060] hover:from-[#808080] hover:via-[#606060] hover:to-[#707070] text-white text-xs font-medium rounded transition flex items-center gap-2 shadow-lg border border-[#909090]/50">
+            <button className="px-4 py-2 bg-gradient-to-br from-[#808080] via-[#606060] to-[#707070] hover:from-[#909090] hover:via-[#707070] hover:to-[#808080] text-white text-xs font-bold rounded-lg transition-all duration-200 flex items-center gap-2.5 shadow-[0_0_20px_rgba(128,128,128,0.4)] border border-[#a0a0a0]/60 hover:scale-105 hover:shadow-[0_0_25px_rgba(144,144,144,0.5)]">
               <Download size={14} />
               내보내기
             </button>
-            <div className="absolute right-0 top-full mt-1 bg-[#1a1a1a]/95 backdrop-blur-lg border border-[#404040] rounded shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-              <button onClick={() => handleExportFBX('json')} className="block w-full text-left px-4 py-2 text-sm text-[#d0d0d0] hover:bg-[#2a2a2a] hover:text-white transition">JSON</button>
-              <button onClick={() => handleExportFBX('bvh')} className="block w-full text-left px-4 py-2 text-sm text-[#d0d0d0] hover:bg-[#2a2a2a] hover:text-white transition">BVH</button>
-              <button onClick={() => handleExportFBX('fbx')} className="block w-full text-left px-4 py-2 text-sm text-[#d0d0d0] hover:bg-[#2a2a2a] hover:text-white transition">FBX</button>
+            <div className="absolute right-0 top-full mt-2 bg-gradient-to-b from-[#1f1f1f]/98 to-[#151515]/98 backdrop-blur-2xl border border-[#505050]/60 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#2a2a2a]/20 via-transparent to-[#2a2a2a]/20 pointer-events-none"></div>
+              <button onClick={() => handleExportFBX('json')} className="relative block w-full text-left px-5 py-3 text-sm font-medium text-[#d8d8d8] hover:bg-gradient-to-r hover:from-[#404040]/40 hover:to-[#303030]/40 hover:text-white transition-all hover:shadow-inner border-b border-[#303030]/30 first:rounded-t-xl">
+                <span className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#808080]"></span>
+                  JSON
+                </span>
+              </button>
+              <button onClick={() => handleExportFBX('bvh')} className="relative block w-full text-left px-5 py-3 text-sm font-medium text-[#d8d8d8] hover:bg-gradient-to-r hover:from-[#404040]/40 hover:to-[#303030]/40 hover:text-white transition-all hover:shadow-inner border-b border-[#303030]/30">
+                <span className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#909090]"></span>
+                  BVH
+                </span>
+              </button>
+              <button onClick={() => handleExportFBX('fbx')} className="relative block w-full text-left px-5 py-3 text-sm font-medium text-[#d8d8d8] hover:bg-gradient-to-r hover:from-[#404040]/40 hover:to-[#303030]/40 hover:text-white transition-all hover:shadow-inner last:rounded-b-xl">
+                <span className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#a0a0a0]"></span>
+                  FBX
+                </span>
+              </button>
             </div>
           </div>
         </div>

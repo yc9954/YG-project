@@ -25,8 +25,8 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
     if (!containerRef.current) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#0a0a0a'); // Slightly lighter black for contrast
-    scene.fog = new THREE.Fog('#0a0a0a', 10, 30);
+    scene.background = new THREE.Color('#2a2a2a'); // Medium gray for better contrast
+    scene.fog = new THREE.Fog('#2a2a2a', 15, 40);
 
     const camera = new THREE.PerspectiveCamera(50, containerRef.current.clientWidth / containerRef.current.clientHeight, 0.1, 100);
     camera.position.set(0, 2, 5);
@@ -37,38 +37,43 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
     renderer.shadowMap.enabled = true;
     containerRef.current.appendChild(renderer.domElement);
 
-    // Cold Rim Lights (Studio Lighting Setup)
-    const ambientLight = new THREE.AmbientLight(0x404060, 0.15); // Very low ambient
+    // Premium Studio Lighting Setup
+    const ambientLight = new THREE.AmbientLight(0x606080, 0.25); // Increased ambient for better visibility
     scene.add(ambientLight);
 
-    // Main Key Light (Cold White)
-    const keyLight = new THREE.SpotLight(0xe0f0ff, 35);
-    keyLight.position.set(4, 6, 6);
-    keyLight.angle = Math.PI / 4;
-    keyLight.penumbra = 0.3;
+    // Main Key Light (Bright White with high intensity)
+    const keyLight = new THREE.SpotLight(0xffffff, 50);
+    keyLight.position.set(4, 7, 6);
+    keyLight.angle = Math.PI / 3.5;
+    keyLight.penumbra = 0.2;
     keyLight.castShadow = true;
     keyLight.shadow.mapSize.width = 2048;
     keyLight.shadow.mapSize.height = 2048;
     scene.add(keyLight);
 
-    // Rim Light 1 (Cold Blue-White from behind)
-    const rimLight1 = new THREE.SpotLight(0xb0d0ff, 25);
-    rimLight1.position.set(-5, 5, -5);
+    // Rim Light 1 (Strong blue-white from behind-left)
+    const rimLight1 = new THREE.SpotLight(0xd0e0ff, 40);
+    rimLight1.position.set(-6, 6, -6);
     rimLight1.angle = Math.PI / 3;
-    rimLight1.penumbra = 0.4;
+    rimLight1.penumbra = 0.3;
     scene.add(rimLight1);
 
-    // Rim Light 2 (Silver highlight)
-    const rimLight2 = new THREE.SpotLight(0xc0c0d0, 20);
-    rimLight2.position.set(5, 4, -4);
+    // Rim Light 2 (Strong silver from behind-right)
+    const rimLight2 = new THREE.SpotLight(0xe0e0e0, 35);
+    rimLight2.position.set(6, 5, -5);
     rimLight2.angle = Math.PI / 3.5;
-    rimLight2.penumbra = 0.5;
+    rimLight2.penumbra = 0.4;
     scene.add(rimLight2);
 
-    // Accent Point Light (Subtle cold accent)
-    const accentLight = new THREE.PointLight(0x8090a0, 3);
-    accentLight.position.set(0, 3, -3);
+    // Accent Point Light (Bright overhead accent)
+    const accentLight = new THREE.PointLight(0xa0b0c0, 8);
+    accentLight.position.set(0, 4, -2);
     scene.add(accentLight);
+
+    // Fill Light (Front fill for softness)
+    const fillLight = new THREE.DirectionalLight(0x9090a0, 2);
+    fillLight.position.set(0, 2, 8);
+    scene.add(fillLight);
 
     const gridHelper = new THREE.GridHelper(20, 20, 0x303040, 0x101015);
     scene.add(gridHelper);
@@ -76,9 +81,9 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
     const dancerGroup = new THREE.Group();
     scene.add(dancerGroup);
 
-    const createBone = (length, color, locked) => {
+    const createBone = (length, radiusTop, radiusBottom, color, locked, jointRadius = 0.08) => {
       const group = new THREE.Group();
-      const geometry = new THREE.CylinderGeometry(0.08, 0.06, length, 24);
+      const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, length, 24);
 
       // Determine material: Polished Chrome (silver) or Matte Black Rubber
       const isChrome = color >= 0x808080; // Silver colors get chrome
@@ -89,26 +94,26 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
         // Locked joints: Red chrome with emission
         material = new THREE.MeshStandardMaterial({
           color: 0xff3030,
-          emissive: 0x800000,
-          roughness: 0.15,
-          metalness: 0.95,
-          envMapIntensity: 1.5
-        });
-      } else if (isChrome) {
-        // Polished Chrome
-        material = new THREE.MeshStandardMaterial({
-          color: color,
-          roughness: 0.1,
-          metalness: 1.0,
+          emissive: 0x900000,
+          roughness: 0.12,
+          metalness: 0.98,
           envMapIntensity: 2.0
         });
-      } else {
-        // Matte Black Rubber
+      } else if (isChrome) {
+        // Polished Chrome with enhanced reflectivity
         material = new THREE.MeshStandardMaterial({
           color: color,
-          roughness: 0.9,
-          metalness: 0.05,
-          envMapIntensity: 0.3
+          roughness: 0.08,
+          metalness: 1.0,
+          envMapIntensity: 2.5
+        });
+      } else {
+        // Matte Black Rubber with subtle sheen
+        material = new THREE.MeshStandardMaterial({
+          color: color,
+          roughness: 0.85,
+          metalness: 0.08,
+          envMapIntensity: 0.4
         });
       }
 
@@ -117,7 +122,7 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
       mesh.castShadow = true;
       mesh.receiveShadow = true;
 
-      const jointGeo = new THREE.SphereGeometry(0.12, 24, 24);
+      const jointGeo = new THREE.SphereGeometry(jointRadius, 32, 32);
       const jointMat = material.clone();
       const joint = new THREE.Mesh(jointGeo, jointMat);
       joint.castShadow = true;
@@ -133,212 +138,221 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
     hips.name = 'hips';
     dancerGroup.add(hips);
 
-    // Spine Chain (Matte Black Rubber)
-    const spine = createBone(0.12, 0x1a1a1a, locks.spine);
-    spine.position.y = 0;
-    spine.name = 'spine';
-    hips.add(spine);
+    // Pelvis (Wide base - Matte Black)
+    const pelvis = createBone(0.08, 0.14, 0.12, 0x2a2a2a, locks.spine, 0.14);
+    pelvis.position.y = 0;
+    pelvis.name = 'pelvis';
+    hips.add(pelvis);
 
-    const spine1 = createBone(0.12, 0x252525, locks.spine);
-    spine1.position.y = 0.12;
+    // Spine Chain (Gradually widening - Matte Black to Dark Gray)
+    const spine = createBone(0.14, 0.10, 0.11, 0x353535, locks.spine, 0.10);
+    spine.position.y = 0.08;
+    spine.name = 'spine';
+    pelvis.add(spine);
+
+    const spine1 = createBone(0.14, 0.11, 0.12, 0x404040, locks.spine, 0.11);
+    spine1.position.y = 0.14;
     spine1.name = 'spine1';
     spine.add(spine1);
 
-    const spine2 = createBone(0.12, 0x303030, locks.spine);
-    spine2.position.y = 0.12;
+    const spine2 = createBone(0.14, 0.12, 0.14, 0x505050, locks.spine, 0.12);
+    spine2.position.y = 0.14;
     spine2.name = 'spine2';
     spine1.add(spine2);
 
-    const chest = createBone(0.15, 0xd0d0d0, locks.spine); // Polished Chrome
-    chest.position.y = 0.12;
+    // Upper Chest (Wide, polished chrome)
+    const chest = createBone(0.18, 0.14, 0.16, 0xc8c8c8, locks.spine, 0.14);
+    chest.position.y = 0.14;
     chest.name = 'chest';
     spine2.add(chest);
 
-    const neck = createBone(0.08, 0xe0e0e0, locks.head); // Bright Chrome
-    neck.position.y = 0.15;
+    // Neck (Slim chrome)
+    const neck = createBone(0.12, 0.05, 0.06, 0xe8e8e8, locks.head, 0.07);
+    neck.position.y = 0.18;
     neck.name = 'neck';
     chest.add(neck);
 
-    const head = createBone(0.18, 0xf0f0f0, locks.head); // Brightest Chrome
-    head.position.y = 0.08;
+    // Head (Bright chrome, oval shape)
+    const head = createBone(0.20, 0.11, 0.10, 0xf8f8f8, locks.head, 0.11);
+    head.position.y = 0.12;
     head.name = 'head';
     neck.add(head);
 
-    // Left Arm Chain (Chrome gradient)
-    const leftShoulder = createBone(0.06, 0xd0d0d0, locks.arms);
-    leftShoulder.position.set(-0.18, 0.12, 0);
-    leftShoulder.rotation.z = Math.PI / 6;
+    // Left Arm Chain (Tapered chrome, human proportions)
+    const leftShoulder = createBone(0.10, 0.08, 0.07, 0xd8d8d8, locks.arms, 0.09);
+    leftShoulder.position.set(-0.24, 0.14, 0);
+    leftShoulder.rotation.z = Math.PI / 4;
     leftShoulder.name = 'leftShoulder';
     chest.add(leftShoulder);
 
-    const leftUpperArm = createBone(0.28, 0xb8b8b8, locks.arms);
-    leftUpperArm.position.y = 0.06;
-    leftUpperArm.rotation.z = -0.2;
+    const leftUpperArm = createBone(0.32, 0.06, 0.05, 0xc0c0c0, locks.arms, 0.07);
+    leftUpperArm.position.y = 0.10;
+    leftUpperArm.rotation.z = -0.3;
     leftUpperArm.name = 'leftUpperArm';
     leftShoulder.add(leftUpperArm);
 
-    const leftForearm = createBone(0.26, 0xa0a0a0, locks.arms);
-    leftForearm.position.y = 0.28;
+    const leftForearm = createBone(0.28, 0.05, 0.04, 0xa8a8a8, locks.arms, 0.06);
+    leftForearm.position.y = 0.32;
     leftForearm.name = 'leftForearm';
     leftUpperArm.add(leftForearm);
 
-    const leftWrist = createBone(0.04, 0x909090, locks.arms);
-    leftWrist.position.y = 0.26;
+    const leftWrist = createBone(0.04, 0.04, 0.04, 0x989898, locks.arms, 0.05);
+    leftWrist.position.y = 0.28;
     leftWrist.name = 'leftWrist';
     leftForearm.add(leftWrist);
 
-    const leftHand = createBone(0.07, 0x707070, locks.arms);
+    const leftHand = createBone(0.09, 0.04, 0.03, 0x888888, locks.arms, 0.05);
     leftHand.position.y = 0.04;
     leftHand.name = 'leftHand';
     leftWrist.add(leftHand);
 
-    // Left Fingers (Chrome)
-    const leftThumb1 = createBone(0.025, 0xe0e0e0, locks.arms);
-    leftThumb1.position.set(0.015, 0.07, 0.01);
-    leftThumb1.rotation.z = -0.4;
+    // Left Fingers (Slender chrome)
+    const leftThumb1 = createBone(0.03, 0.015, 0.012, 0xe8e8e8, locks.arms, 0.02);
+    leftThumb1.position.set(0.02, 0.09, 0.015);
+    leftThumb1.rotation.z = -0.5;
     leftThumb1.name = 'leftThumb1';
     leftHand.add(leftThumb1);
 
-    const leftThumb2 = createBone(0.018, 0xd8d8d8, locks.arms);
-    leftThumb2.position.y = 0.025;
+    const leftThumb2 = createBone(0.022, 0.012, 0.010, 0xe0e0e0, locks.arms, 0.015);
+    leftThumb2.position.y = 0.03;
     leftThumb2.name = 'leftThumb2';
     leftThumb1.add(leftThumb2);
 
-    const leftIndex1 = createBone(0.03, 0xd0d0d0, locks.arms);
-    leftIndex1.position.set(0.008, 0.07, 0.003);
-    leftIndex1.rotation.z = -0.05;
+    const leftIndex1 = createBone(0.035, 0.013, 0.011, 0xd8d8d8, locks.arms, 0.018);
+    leftIndex1.position.set(0.012, 0.09, 0.005);
+    leftIndex1.rotation.z = -0.08;
     leftIndex1.name = 'leftIndex1';
     leftHand.add(leftIndex1);
 
-    const leftIndex2 = createBone(0.022, 0xc8c8c8, locks.arms);
-    leftIndex2.position.y = 0.03;
+    const leftIndex2 = createBone(0.026, 0.011, 0.009, 0xd0d0d0, locks.arms, 0.014);
+    leftIndex2.position.y = 0.035;
     leftIndex2.name = 'leftIndex2';
     leftIndex1.add(leftIndex2);
 
-    const leftMiddle1 = createBone(0.032, 0xc0c0c0, locks.arms);
-    leftMiddle1.position.set(0, 0.07, 0);
+    const leftMiddle1 = createBone(0.038, 0.013, 0.011, 0xc8c8c8, locks.arms, 0.018);
+    leftMiddle1.position.set(0, 0.09, 0);
     leftMiddle1.name = 'leftMiddle1';
     leftHand.add(leftMiddle1);
 
-    const leftMiddle2 = createBone(0.025, 0xb8b8b8, locks.arms);
-    leftMiddle2.position.y = 0.032;
+    const leftMiddle2 = createBone(0.028, 0.011, 0.009, 0xc0c0c0, locks.arms, 0.014);
+    leftMiddle2.position.y = 0.038;
     leftMiddle2.name = 'leftMiddle2';
     leftMiddle1.add(leftMiddle2);
 
-    // Right Arm Chain (Chrome gradient)
-    const rightShoulder = createBone(0.06, 0xd0d0d0, locks.arms);
-    rightShoulder.position.set(0.18, 0.12, 0);
-    rightShoulder.rotation.z = -Math.PI / 6;
+    // Right Arm Chain (Tapered chrome, human proportions)
+    const rightShoulder = createBone(0.10, 0.08, 0.07, 0xd8d8d8, locks.arms, 0.09);
+    rightShoulder.position.set(0.24, 0.14, 0);
+    rightShoulder.rotation.z = -Math.PI / 4;
     rightShoulder.name = 'rightShoulder';
     chest.add(rightShoulder);
 
-    const rightUpperArm = createBone(0.28, 0xb8b8b8, locks.arms);
-    rightUpperArm.position.y = 0.06;
-    rightUpperArm.rotation.z = 0.2;
+    const rightUpperArm = createBone(0.32, 0.06, 0.05, 0xc0c0c0, locks.arms, 0.07);
+    rightUpperArm.position.y = 0.10;
+    rightUpperArm.rotation.z = 0.3;
     rightUpperArm.name = 'rightUpperArm';
     rightShoulder.add(rightUpperArm);
 
-    const rightForearm = createBone(0.26, 0xa0a0a0, locks.arms);
-    rightForearm.position.y = 0.28;
+    const rightForearm = createBone(0.28, 0.05, 0.04, 0xa8a8a8, locks.arms, 0.06);
+    rightForearm.position.y = 0.32;
     rightForearm.name = 'rightForearm';
     rightUpperArm.add(rightForearm);
 
-    const rightWrist = createBone(0.04, 0x909090, locks.arms);
-    rightWrist.position.y = 0.26;
+    const rightWrist = createBone(0.04, 0.04, 0.04, 0x989898, locks.arms, 0.05);
+    rightWrist.position.y = 0.28;
     rightWrist.name = 'rightWrist';
     rightForearm.add(rightWrist);
 
-    const rightHand = createBone(0.07, 0x707070, locks.arms);
+    const rightHand = createBone(0.09, 0.04, 0.03, 0x888888, locks.arms, 0.05);
     rightHand.position.y = 0.04;
     rightHand.name = 'rightHand';
     rightWrist.add(rightHand);
 
-    // Right Fingers (Chrome)
-    const rightThumb1 = createBone(0.025, 0xe0e0e0, locks.arms);
-    rightThumb1.position.set(-0.015, 0.07, 0.01);
-    rightThumb1.rotation.z = 0.4;
+    // Right Fingers (Slender chrome)
+    const rightThumb1 = createBone(0.03, 0.015, 0.012, 0xe8e8e8, locks.arms, 0.02);
+    rightThumb1.position.set(-0.02, 0.09, 0.015);
+    rightThumb1.rotation.z = 0.5;
     rightThumb1.name = 'rightThumb1';
     rightHand.add(rightThumb1);
 
-    const rightThumb2 = createBone(0.018, 0xd8d8d8, locks.arms);
-    rightThumb2.position.y = 0.025;
+    const rightThumb2 = createBone(0.022, 0.012, 0.010, 0xe0e0e0, locks.arms, 0.015);
+    rightThumb2.position.y = 0.03;
     rightThumb2.name = 'rightThumb2';
     rightThumb1.add(rightThumb2);
 
-    const rightIndex1 = createBone(0.03, 0xd0d0d0, locks.arms);
-    rightIndex1.position.set(-0.008, 0.07, 0.003);
-    rightIndex1.rotation.z = 0.05;
+    const rightIndex1 = createBone(0.035, 0.013, 0.011, 0xd8d8d8, locks.arms, 0.018);
+    rightIndex1.position.set(-0.012, 0.09, 0.005);
+    rightIndex1.rotation.z = 0.08;
     rightIndex1.name = 'rightIndex1';
     rightHand.add(rightIndex1);
 
-    const rightIndex2 = createBone(0.022, 0xc8c8c8, locks.arms);
-    rightIndex2.position.y = 0.03;
+    const rightIndex2 = createBone(0.026, 0.011, 0.009, 0xd0d0d0, locks.arms, 0.014);
+    rightIndex2.position.y = 0.035;
     rightIndex2.name = 'rightIndex2';
     rightIndex1.add(rightIndex2);
 
-    const rightMiddle1 = createBone(0.032, 0xc0c0c0, locks.arms);
-    rightMiddle1.position.set(0, 0.07, 0);
+    const rightMiddle1 = createBone(0.038, 0.013, 0.011, 0xc8c8c8, locks.arms, 0.018);
+    rightMiddle1.position.set(0, 0.09, 0);
     rightMiddle1.name = 'rightMiddle1';
     rightHand.add(rightMiddle1);
 
-    const rightMiddle2 = createBone(0.025, 0xb8b8b8, locks.arms);
-    rightMiddle2.position.y = 0.032;
+    const rightMiddle2 = createBone(0.028, 0.011, 0.009, 0xc0c0c0, locks.arms, 0.014);
+    rightMiddle2.position.y = 0.038;
     rightMiddle2.name = 'rightMiddle2';
     rightMiddle1.add(rightMiddle2);
 
-    // Left Leg Chain (Matte Black to Chrome gradient)
-    const leftThigh = createBone(0.38, 0x505050, locks.legs);
-    leftThigh.position.set(-0.09, -0.02, 0);
-    leftThigh.rotation.x = 0.05;
+    // Left Leg Chain (Powerful, athletic proportions - Dark to Chrome gradient)
+    const leftThigh = createBone(0.42, 0.09, 0.07, 0x585858, locks.legs, 0.10);
+    leftThigh.position.set(-0.11, -0.08, 0);
+    leftThigh.rotation.x = 0.08;
     leftThigh.name = 'leftThigh';
-    hips.add(leftThigh);
+    pelvis.add(leftThigh);
 
-    const leftShin = createBone(0.36, 0x404040, locks.legs);
-    leftShin.position.y = 0.38;
+    const leftShin = createBone(0.40, 0.06, 0.05, 0x686868, locks.legs, 0.08);
+    leftShin.position.y = 0.42;
     leftShin.name = 'leftShin';
     leftThigh.add(leftShin);
 
-    const leftAnkle = createBone(0.04, 0x808080, locks.legs);
-    leftAnkle.position.y = 0.36;
+    const leftAnkle = createBone(0.05, 0.05, 0.05, 0x909090, locks.legs, 0.06);
+    leftAnkle.position.y = 0.40;
     leftAnkle.name = 'leftAnkle';
     leftShin.add(leftAnkle);
 
-    const leftFoot = createBone(0.09, 0xa0a0a0, locks.legs);
-    leftFoot.position.y = 0.04;
-    leftFoot.rotation.x = -Math.PI / 2.2;
+    const leftFoot = createBone(0.12, 0.05, 0.04, 0xb0b0b0, locks.legs, 0.06);
+    leftFoot.position.y = 0.05;
+    leftFoot.rotation.x = -Math.PI / 2.1;
     leftFoot.name = 'leftFoot';
     leftAnkle.add(leftFoot);
 
-    const leftToe = createBone(0.05, 0xc0c0c0, locks.legs);
-    leftToe.position.y = 0.09;
+    const leftToe = createBone(0.06, 0.04, 0.03, 0xd0d0d0, locks.legs, 0.04);
+    leftToe.position.y = 0.12;
     leftToe.name = 'leftToe';
     leftFoot.add(leftToe);
 
-    // Right Leg Chain (Matte Black to Chrome gradient)
-    const rightThigh = createBone(0.38, 0x505050, locks.legs);
-    rightThigh.position.set(0.09, -0.02, 0);
-    rightThigh.rotation.x = 0.05;
+    // Right Leg Chain (Powerful, athletic proportions - Dark to Chrome gradient)
+    const rightThigh = createBone(0.42, 0.09, 0.07, 0x585858, locks.legs, 0.10);
+    rightThigh.position.set(0.11, -0.08, 0);
+    rightThigh.rotation.x = 0.08;
     rightThigh.name = 'rightThigh';
-    hips.add(rightThigh);
+    pelvis.add(rightThigh);
 
-    const rightShin = createBone(0.36, 0x404040, locks.legs);
-    rightShin.position.y = 0.38;
+    const rightShin = createBone(0.40, 0.06, 0.05, 0x686868, locks.legs, 0.08);
+    rightShin.position.y = 0.42;
     rightShin.name = 'rightShin';
     rightThigh.add(rightShin);
 
-    const rightAnkle = createBone(0.04, 0x808080, locks.legs);
-    rightAnkle.position.y = 0.36;
+    const rightAnkle = createBone(0.05, 0.05, 0.05, 0x909090, locks.legs, 0.06);
+    rightAnkle.position.y = 0.40;
     rightAnkle.name = 'rightAnkle';
     rightShin.add(rightAnkle);
 
-    const rightFoot = createBone(0.09, 0xa0a0a0, locks.legs);
-    rightFoot.position.y = 0.04;
-    rightFoot.rotation.x = -Math.PI / 2.2;
+    const rightFoot = createBone(0.12, 0.05, 0.04, 0xb0b0b0, locks.legs, 0.06);
+    rightFoot.position.y = 0.05;
+    rightFoot.rotation.x = -Math.PI / 2.1;
     rightFoot.name = 'rightFoot';
     rightAnkle.add(rightFoot);
 
-    const rightToe = createBone(0.05, 0xc0c0c0, locks.legs);
-    rightToe.position.y = 0.09;
+    const rightToe = createBone(0.06, 0.04, 0.03, 0xd0d0d0, locks.legs, 0.04);
+    rightToe.position.y = 0.12;
     rightToe.name = 'rightToe';
     rightFoot.add(rightToe);
 
@@ -397,55 +411,56 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
       // blendFactor는 0~1 사이 값으로 클램핑
       const blendFactor = Math.max(0, Math.min(1, easingFunc(Math.max(0, Math.min(1, smoothness)))));
 
-      // 확장된 관절 매핑 (50+ 관절)
+      // Enhanced 40+ Joint Skeleton System
       const jointMap = [
         { name: 'hips', idx: 0, parent: null },
-        { name: 'spine', idx: 1, parent: 'hips' },
-        { name: 'spine1', idx: 2, parent: 'spine' },
-        { name: 'spine2', idx: 3, parent: 'spine1' },
-        { name: 'chest', idx: 4, parent: 'spine2' },
-        { name: 'neck', idx: 5, parent: 'chest' },
-        { name: 'head', idx: 6, parent: 'neck' },
+        { name: 'pelvis', idx: 1, parent: 'hips' },
+        { name: 'spine', idx: 2, parent: 'pelvis' },
+        { name: 'spine1', idx: 3, parent: 'spine' },
+        { name: 'spine2', idx: 4, parent: 'spine1' },
+        { name: 'chest', idx: 5, parent: 'spine2' },
+        { name: 'neck', idx: 6, parent: 'chest' },
+        { name: 'head', idx: 7, parent: 'neck' },
 
         // Left Arm Chain
-        { name: 'leftShoulder', idx: 7, parent: 'chest' },
-        { name: 'leftUpperArm', idx: 8, parent: 'leftShoulder' },
-        { name: 'leftForearm', idx: 9, parent: 'leftUpperArm' },
-        { name: 'leftWrist', idx: 10, parent: 'leftForearm' },
-        { name: 'leftHand', idx: 11, parent: 'leftWrist' },
-        { name: 'leftThumb1', idx: 12, parent: 'leftHand' },
-        { name: 'leftThumb2', idx: 13, parent: 'leftThumb1' },
-        { name: 'leftIndex1', idx: 14, parent: 'leftHand' },
-        { name: 'leftIndex2', idx: 15, parent: 'leftIndex1' },
-        { name: 'leftMiddle1', idx: 16, parent: 'leftHand' },
-        { name: 'leftMiddle2', idx: 17, parent: 'leftMiddle1' },
+        { name: 'leftShoulder', idx: 8, parent: 'chest' },
+        { name: 'leftUpperArm', idx: 9, parent: 'leftShoulder' },
+        { name: 'leftForearm', idx: 10, parent: 'leftUpperArm' },
+        { name: 'leftWrist', idx: 11, parent: 'leftForearm' },
+        { name: 'leftHand', idx: 12, parent: 'leftWrist' },
+        { name: 'leftThumb1', idx: 13, parent: 'leftHand' },
+        { name: 'leftThumb2', idx: 14, parent: 'leftThumb1' },
+        { name: 'leftIndex1', idx: 15, parent: 'leftHand' },
+        { name: 'leftIndex2', idx: 16, parent: 'leftIndex1' },
+        { name: 'leftMiddle1', idx: 17, parent: 'leftHand' },
+        { name: 'leftMiddle2', idx: 18, parent: 'leftMiddle1' },
 
         // Right Arm Chain
-        { name: 'rightShoulder', idx: 18, parent: 'chest' },
-        { name: 'rightUpperArm', idx: 19, parent: 'rightShoulder' },
-        { name: 'rightForearm', idx: 20, parent: 'rightUpperArm' },
-        { name: 'rightWrist', idx: 21, parent: 'rightForearm' },
-        { name: 'rightHand', idx: 22, parent: 'rightWrist' },
-        { name: 'rightThumb1', idx: 23, parent: 'rightHand' },
-        { name: 'rightThumb2', idx: 24, parent: 'rightThumb1' },
-        { name: 'rightIndex1', idx: 25, parent: 'rightHand' },
-        { name: 'rightIndex2', idx: 26, parent: 'rightIndex1' },
-        { name: 'rightMiddle1', idx: 27, parent: 'rightHand' },
-        { name: 'rightMiddle2', idx: 28, parent: 'rightMiddle1' },
+        { name: 'rightShoulder', idx: 19, parent: 'chest' },
+        { name: 'rightUpperArm', idx: 20, parent: 'rightShoulder' },
+        { name: 'rightForearm', idx: 21, parent: 'rightUpperArm' },
+        { name: 'rightWrist', idx: 22, parent: 'rightForearm' },
+        { name: 'rightHand', idx: 23, parent: 'rightWrist' },
+        { name: 'rightThumb1', idx: 24, parent: 'rightHand' },
+        { name: 'rightThumb2', idx: 25, parent: 'rightThumb1' },
+        { name: 'rightIndex1', idx: 26, parent: 'rightHand' },
+        { name: 'rightIndex2', idx: 27, parent: 'rightIndex1' },
+        { name: 'rightMiddle1', idx: 28, parent: 'rightHand' },
+        { name: 'rightMiddle2', idx: 29, parent: 'rightMiddle1' },
 
         // Left Leg Chain
-        { name: 'leftThigh', idx: 29, parent: 'hips' },
-        { name: 'leftShin', idx: 30, parent: 'leftThigh' },
-        { name: 'leftAnkle', idx: 31, parent: 'leftShin' },
-        { name: 'leftFoot', idx: 32, parent: 'leftAnkle' },
-        { name: 'leftToe', idx: 33, parent: 'leftFoot' },
+        { name: 'leftThigh', idx: 30, parent: 'pelvis' },
+        { name: 'leftShin', idx: 31, parent: 'leftThigh' },
+        { name: 'leftAnkle', idx: 32, parent: 'leftShin' },
+        { name: 'leftFoot', idx: 33, parent: 'leftAnkle' },
+        { name: 'leftToe', idx: 34, parent: 'leftFoot' },
 
         // Right Leg Chain
-        { name: 'rightThigh', idx: 34, parent: 'hips' },
-        { name: 'rightShin', idx: 35, parent: 'rightThigh' },
-        { name: 'rightAnkle', idx: 36, parent: 'rightShin' },
-        { name: 'rightFoot', idx: 37, parent: 'rightAnkle' },
-        { name: 'rightToe', idx: 38, parent: 'rightFoot' },
+        { name: 'rightThigh', idx: 35, parent: 'pelvis' },
+        { name: 'rightShin', idx: 36, parent: 'rightThigh' },
+        { name: 'rightAnkle', idx: 37, parent: 'rightShin' },
+        { name: 'rightFoot', idx: 38, parent: 'rightAnkle' },
+        { name: 'rightToe', idx: 39, parent: 'rightFoot' },
       ];
 
       // 확장된 스켈레톤 구조 직접 참조 (name 기반)
@@ -461,6 +476,7 @@ const NativeThreeViewer = ({ isPlaying, params, locks, currentTime, motionData, 
 
       const boneMap = {
         hips: hips,
+        pelvis: findBoneByName(hips, 'pelvis'),
         spine: findBoneByName(hips, 'spine'),
         spine1: findBoneByName(hips, 'spine1'),
         spine2: findBoneByName(hips, 'spine2'),
@@ -1303,11 +1319,14 @@ export default function SotaDanceStudio() {
       </nav>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className="w-80 bg-[#0a0a0a]/90 backdrop-blur-xl border-r border-[#2a2a2e] flex flex-col overflow-y-auto shadow-2xl">
+        <aside className="w-80 bg-gradient-to-b from-[#0f0f0f]/98 via-[#0a0a0a]/98 to-[#050505]/98 backdrop-blur-2xl border-r border-[#404040]/30 flex flex-col overflow-y-auto shadow-[0_0_40px_rgba(0,0,0,0.8)]">
           {activeTab === 'generation' && (
-            <div className="p-4 space-y-6">
+            <div className="p-6 space-y-8">
               <div>
-                <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 tracking-wider">STEP 1: 음악 업로드</h3>
+                <h3 className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-[#e0e0e0] to-[#a0a0a0] uppercase mb-4 tracking-[0.2em] flex items-center gap-2">
+                  <span className="w-8 h-[1px] bg-gradient-to-r from-transparent to-[#808080]"></span>
+                  STEP 1: 음악 업로드
+                </h3>
                 <input
                   type="file"
                   accept="audio/*"
@@ -1317,24 +1336,41 @@ export default function SotaDanceStudio() {
                 />
                 <label
                   htmlFor="audio-upload"
-                  className="block w-full p-4 border-2 border-dashed border-slate-700 rounded-lg text-center cursor-pointer hover:border-pink-500 transition"
+                  className="block w-full p-6 border-2 border-dashed border-[#505050]/40 rounded-2xl text-center cursor-pointer hover:border-[#808080] transition-all duration-300 bg-gradient-to-br from-[#1a1a1a]/60 to-[#0a0a0a]/60 hover:from-[#252525]/80 hover:to-[#151515]/80 group relative overflow-hidden"
                 >
-                  <Video size={24} className="mx-auto mb-2 text-[#808080]" />
-                  <div className="text-sm text-slate-300">음악 파일 선택</div>
-                  {audioFile && <div className="text-xs text-slate-500 mt-1">{audioFile.name}</div>}
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#808080]/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <Video size={28} className="mx-auto mb-3 text-[#a0a0a0] group-hover:text-[#d0d0d0] transition-colors duration-300" />
+                  <div className="text-sm font-semibold text-[#d0d0d0] mb-1">음악 파일 선택</div>
+                  {audioFile && <div className="text-xs text-[#909090] mt-2 font-mono">{audioFile.name}</div>}
                 </label>
                 {isAnalyzingAudio && (
-                  <div className="mt-2 text-xs text-pink-400">분석 중...</div>
+                  <div className="mt-3 text-xs text-[#c0c0c0] flex items-center gap-2 animate-pulse">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#c0c0c0]"></div>
+                    분석 중...
+                  </div>
                 )}
                 {audioAnalysis && (
-                  <div className="mt-4 p-3 bg-slate-900 rounded text-xs space-y-1">
-                    <div>템포: <span className="text-pink-400">{Math.round(audioAnalysis.tempo)} BPM</span></div>
-                    <div>길이: <span className="text-pink-400">{formatTime(audioAnalysis.duration)}</span></div>
-                    <div>에너지: <span className="text-pink-400">{Math.round(audioAnalysis.energy * 100)}%</span></div>
-                    <div>키: <span className="text-pink-400">{audioAnalysis.key}</span></div>
+                  <div className="mt-4 p-4 bg-gradient-to-br from-[#1a1a1a]/80 to-[#0f0f0f]/80 rounded-xl border border-[#404040]/40 text-xs space-y-2 backdrop-blur-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#a0a0a0]">템포</span>
+                      <span className="text-[#e0e0e0] font-bold">{Math.round(audioAnalysis.tempo)} BPM</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#a0a0a0]">길이</span>
+                      <span className="text-[#e0e0e0] font-bold">{formatTime(audioAnalysis.duration)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#a0a0a0]">에너지</span>
+                      <span className="text-[#e0e0e0] font-bold">{Math.round(audioAnalysis.energy * 100)}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#a0a0a0]">키</span>
+                      <span className="text-[#e0e0e0] font-bold">{audioAnalysis.key}</span>
+                    </div>
                     {audioAnalysis.recommended_style && (
-                      <div className="mt-2 pt-2 border-t border-slate-700">
-                        추천 스타일: <span className="text-pink-400 font-bold">{audioAnalysis.recommended_style}</span>
+                      <div className="mt-3 pt-3 border-t border-[#404040]/40 flex justify-between items-center">
+                        <span className="text-[#a0a0a0]">추천 스타일</span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#e0e0e0] to-[#c0c0c0] font-black uppercase text-sm">{audioAnalysis.recommended_style}</span>
                       </div>
                     )}
                   </div>
@@ -1342,22 +1378,28 @@ export default function SotaDanceStudio() {
               </div>
 
               <div>
-                <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 tracking-wider">STEP 2: 안무 프롬프트 입력</h3>
+                <h3 className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-[#e0e0e0] to-[#a0a0a0] uppercase mb-4 tracking-[0.2em] flex items-center gap-2">
+                  <span className="w-8 h-[1px] bg-gradient-to-r from-transparent to-[#808080]"></span>
+                  STEP 2: 안무 프롬프트
+                </h3>
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="예: Powerful hip-hop routine with popping elements."
-                  className="w-full p-3 bg-slate-900 border border-slate-700 rounded text-sm resize-none focus:outline-none focus:border-pink-500"
+                  className="w-full p-4 bg-gradient-to-br from-[#1a1a1a]/80 to-[#0f0f0f]/80 border border-[#505050]/40 rounded-xl text-sm text-[#e0e0e0] placeholder-[#707070] resize-none focus:outline-none focus:border-[#808080] focus:shadow-[0_0_20px_rgba(128,128,128,0.2)] transition-all duration-300 backdrop-blur-sm"
                   rows={3}
                 />
               </div>
 
               <div>
-                <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 tracking-wider">STYLE</h3>
+                <h3 className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-[#e0e0e0] to-[#a0a0a0] uppercase mb-4 tracking-[0.2em] flex items-center gap-2">
+                  <span className="w-8 h-[1px] bg-gradient-to-r from-transparent to-[#808080]"></span>
+                  STYLE
+                </h3>
                 <select
                   value={selectedStyle}
                   onChange={(e) => setSelectedStyle(e.target.value)}
-                  className="w-full p-2 bg-slate-900 border border-slate-700 rounded text-sm focus:outline-none focus:border-pink-500"
+                  className="w-full p-3 bg-gradient-to-br from-[#1a1a1a]/80 to-[#0f0f0f]/80 border border-[#505050]/40 rounded-xl text-sm text-[#e0e0e0] focus:outline-none focus:border-[#808080] focus:shadow-[0_0_20px_rgba(128,128,128,0.2)] transition-all duration-300 backdrop-blur-sm cursor-pointer"
                 >
                   <option value="hiphop">Hip-Hop</option>
                   <option value="pop">Pop</option>
@@ -1370,30 +1412,36 @@ export default function SotaDanceStudio() {
               </div>
 
               <div>
-                <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 tracking-wider">부분 고정 (IN-PAINTING)</h3>
-                <div className="grid grid-cols-2 gap-2">
+                <h3 className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-[#e0e0e0] to-[#a0a0a0] uppercase mb-4 tracking-[0.2em] flex items-center gap-2">
+                  <span className="w-8 h-[1px] bg-gradient-to-r from-transparent to-[#808080]"></span>
+                  IN-PAINTING
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
                   {['head', 'spine', 'arms', 'legs'].map(part => (
                     <button
                       key={part}
                       onClick={() => toggleLock(part)}
-                      className={`p-2 rounded border transition flex items-center gap-2 ${
+                      className={`p-3 rounded-xl border transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden group ${
                         locks[part]
-                          ? 'bg-red-500/20 border-red-500 text-red-400'
-                          : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-600'
+                          ? 'bg-gradient-to-br from-red-900/40 to-red-950/40 border-red-600/60 text-red-300 shadow-[0_0_20px_rgba(220,38,38,0.3)]'
+                          : 'bg-gradient-to-br from-[#1a1a1a]/60 to-[#0f0f0f]/60 border-[#505050]/40 text-[#c0c0c0] hover:border-[#707070] hover:from-[#252525]/80 hover:to-[#1a1a1a]/80'
                       }`}
                     >
+                      <div className={`absolute inset-0 transition-opacity duration-300 ${locks[part] ? 'bg-gradient-to-br from-red-500/10 to-transparent' : 'bg-gradient-to-br from-[#808080]/5 to-transparent opacity-0 group-hover:opacity-100'}`}></div>
                       {locks[part] ? <Lock size={14} /> : <Unlock size={14} />}
-                      <span className="text-xs capitalize">{part}</span>
+                      <span className="text-xs font-bold uppercase tracking-wider relative z-10">{part}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <h3 className="text-xs font-bold text-[#c0c0c0] uppercase mb-3 flex items-center gap-2 tracking-wider">
-                  <Sliders size={12} /> DIFFUSION PARAMETERS
+                <h3 className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-[#e0e0e0] to-[#a0a0a0] uppercase mb-5 tracking-[0.2em] flex items-center gap-2">
+                  <span className="w-8 h-[1px] bg-gradient-to-r from-transparent to-[#808080]"></span>
+                  <Sliders size={12} className="text-[#a0a0a0]" />
+                  PARAMETERS
                 </h3>
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {[
                     { key: 'energy', label: 'Energy', value: params.energy },
                     { key: 'smoothness', label: 'Smoothness', value: params.smoothness },
@@ -1401,19 +1449,25 @@ export default function SotaDanceStudio() {
                     { key: 'creativity', label: 'Creativity', value: params.creativity }
                   ].map(({ key, label, value }) => (
                     <div key={key}>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-[#b0b0b0]">{label}</span>
-                        <span className="text-[#e0e0e0] font-semibold">{Math.round(value * 100)}%</span>
+                      <div className="flex justify-between text-xs mb-2">
+                        <span className="text-[#a0a0a0] font-semibold tracking-wide">{label}</span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f0f0f0] to-[#c0c0c0] font-black text-sm">{Math.round(value * 100)}%</span>
                       </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={value}
-                        onChange={(e) => setParams(p => ({ ...p, [key]: parseFloat(e.target.value) }))}
-                        className="w-full"
-                      />
+                      <div className="relative">
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          value={value}
+                          onChange={(e) => setParams(p => ({ ...p, [key]: parseFloat(e.target.value) }))}
+                          className="w-full h-1.5 bg-gradient-to-r from-[#303030] to-[#202020] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-[#e0e0e0] [&::-webkit-slider-thumb]:to-[#a0a0a0] [&::-webkit-slider-thumb]:shadow-[0_0_12px_rgba(192,192,192,0.5)] [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 hover:[&::-webkit-slider-thumb]:scale-110 hover:[&::-webkit-slider-thumb]:shadow-[0_0_20px_rgba(224,224,224,0.7)]"
+                        />
+                        <div
+                          className="absolute top-0 left-0 h-1.5 bg-gradient-to-r from-[#707070] to-[#909090] rounded-full pointer-events-none transition-all duration-150"
+                          style={{ width: `${value * 100}%` }}
+                        ></div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1422,16 +1476,17 @@ export default function SotaDanceStudio() {
               <button
                 onClick={handleGenerateMotion}
                 disabled={isGenerating || !audioFile || !audioAnalysis}
-                className="w-full p-4 bg-gradient-to-r from-[#808080] via-[#606060] to-[#707070] hover:from-[#909090] hover:via-[#707070] hover:to-[#808080] text-white font-bold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-xl border border-[#a0a0a0]/50"
+                className="w-full p-5 bg-gradient-to-br from-[#808080] via-[#707070] to-[#606060] hover:from-[#909090] hover:via-[#808080] hover:to-[#707070] text-white font-black text-sm uppercase tracking-wider rounded-2xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(128,128,128,0.4)] border border-[#b0b0b0]/60 hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(144,144,144,0.6)] relative overflow-hidden group"
               >
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 {isGenerating ? (
                   <>
-                    <Activity className="animate-spin" size={20} />
+                    <Activity className="animate-spin" size={22} />
                     생성 중... {generationProgress}%
                   </>
                 ) : (
                   <>
-                    <Wand2 size={20} />
+                    <Wand2 size={22} />
                     음악 + 프롬프트로 안무 생성
                   </>
                 )}
